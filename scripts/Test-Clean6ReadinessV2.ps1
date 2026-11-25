@@ -60,8 +60,19 @@ try {
   Add ('AUDIT_'+($i+1)+'_SIZE_BYTES') ([string]$item.Length)
   Add ('AUDIT_'+($i+1)+'_SHA256') ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash)
   if($node){
-   $null=& node --check $path 2>$null
-   Add ('AUDIT_'+($i+1)+'_NODE_SYNTAX_OK') ([string]($LASTEXITCODE -eq 0))
+   # A syntax error emits stderr; keep the check non-terminating and redact stderr.
+   $priorPreference=$ErrorActionPreference
+   $syntaxOk=$false
+   try {
+    $ErrorActionPreference='Continue'
+    $null=& node --check $path 2>$null
+    $syntaxOk=($LASTEXITCODE -eq 0)
+   } catch {
+    $syntaxOk=$false
+   } finally {
+    $ErrorActionPreference=$priorPreference
+   }
+   Add ('AUDIT_'+($i+1)+'_NODE_SYNTAX_OK') ([string]$syntaxOk)
   }
  }
  Add 'AUDIT_NAMES_OR_PATHS_REDACTED' 'YES'
