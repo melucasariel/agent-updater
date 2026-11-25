@@ -49,4 +49,5 @@ jobs:
             if($LASTEXITCODE -ne 3 -or $result -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){throw 'first request failed'}
             $result=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
             if($LASTEXITCODE -ne 2 -or $result -notcontains '[BLOQUEADO] REPLAY_OR_STORAGE_ERROR'){throw 'replay not blocked'}
+            $global:LASTEXITCODE=0
           } finally {$rsa.Dispose()}
