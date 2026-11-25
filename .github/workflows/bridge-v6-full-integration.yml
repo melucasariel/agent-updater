@@ -56,6 +56,7 @@ jobs:
             if(($status -join "`n") -notmatch 'STAGED=True'){throw 'Status missing'}
             $again=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
             if($again -notcontains '[BLOQUEADO] EXISTING_INSTALL_REQUIRES_MIGRATION_REVIEW'){throw 'Overwrite guard failed'}
+            $global:LASTEXITCODE=0
           } finally {$rsa.Dispose()}
       - name: Signed request accepted once, replay blocked
         shell: powershell
@@ -90,4 +91,5 @@ jobs:
             $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
             $unsafe=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($unsafe -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
+            $global:LASTEXITCODE=0
           } finally {$rsa.Dispose()}
