@@ -42,9 +42,11 @@ try{
  WriteUtf8 $test $script
  $before=(Get-FileHash -LiteralPath $agent -Algorithm SHA256).Hash
  $result=@(& $test -DryRun 2>&1)
+ Write-Output ('DIAG_DRYRUN='+((@($result) -join ' | ') -replace '[^A-Za-z0-9_\[\]=: |.-]','_'))
  Check ([string]::Join(' ',@($result)) -match 'MAJOR_DRY_RUN_PRECHECK') 'BRIDGE_DRY_RUN'
  Check ((Get-FileHash -LiteralPath $agent -Algorithm SHA256).Hash -eq $before) 'DRY_RUN_NO_REPLACE'
  $result=@(& $test 2>&1)
+ Write-Output ('DIAG_INSTALL='+((@($result) -join ' | ') -replace '[^A-Za-z0-9_\[\]=: |.-]','_'))
  Check ([string]::Join(' ',@($result)) -match 'GUARDIAN_MAJOR_3_4_COM_HEALTH') 'MAJOR_AGENT_LIVE_HANDSHAKE'
  Check ((Get-Content -LiteralPath (Join-Path $root 'installed_version.txt') -Raw).Trim() -eq '3.4.0') 'INSTALLED_VERSION_COMMITTED'
  $newContent=Get-Content -LiteralPath $agent -Raw
