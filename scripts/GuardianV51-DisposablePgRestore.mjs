@@ -84,12 +84,17 @@ export function exercise(o){
     '--label','r62.guardian.lab=disposable-v51',
     '-e','POSTGRES_PASSWORD='+pass,'-e','POSTGRES_DB=restoretest',image],{timeout:60000});
   diagnosticStage='WAIT_POSTGRES';
-  let ready=false;
-  for(let i=0;i<40;i++){
-   if(dockerSafe(['exec','--user','postgres',container,'pg_isready','-U','postgres','-d','restoretest'])){ready=true;break;}
-   sleep(500);
+  // pg_isready alone may report the temporary initialization server as ready.
+  // Require multiple successful SQL connections to the *target database*.
+  let stable=0;
+  for(let i=0;i<60;i++){
+   if(dockerSafe(['exec','--user','postgres',container,'psql','-X','-qAt','-w','-U','postgres','-d','restoretest','-v','ON_ERROR_STOP=1','-c','SELECT 1'])){
+    stable++;
+    if(stable>=4)break;
+   }else stable=0;
+   sleep(750);
   }
-  if(!ready)fail('PG17_NOT_READY');
+  if(stable<4)fail('PG17_NOT_READY');
   // No egress network and no published ports. Do not trust Docker CLI defaults.
   diagnosticStage='INSPECT_ISOLATION';
   const ci=JSON.parse(docker(['inspect',container]))[0];
