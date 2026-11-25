@@ -24,6 +24,7 @@ try{
  const components={};
  data(components,'database','file','backup/snapshot.r62db','ENCRYPTED_SYNTHETIC_DATA_NO_SECRETS');
  data(components,'web','directory','web','');
+ writeFileSync(path.join(components.web.path,'Documento de teste ç.txt'),'UTF8_SIMULADO');
  data(components,'api','directory','api','');
  data(components,'storage','directory','storage','');
  data(components,'dns','file','dns.json','SYNTHETIC');
@@ -42,8 +43,8 @@ try{
  const manifest=JSON.parse(readFileSync(path.join(target,'manifest.json'),'utf8'));
  assert.equal(manifest.format,'r62-guardian-v5-lab-stage-1');
  assert.equal(manifest.secretsVaultIncluded,false);
- assert.equal(manifest.entries.length,6);
- assert.equal(verifyStage(target).files,6);
+ assert.equal(manifest.entries.length,7);
+ assert.equal(verifyStage(target).files,7);
  assert.equal(existsSync(path.join(target,'secrets-vault')),false);
  assert.equal(readFileSync(path.join(target,'database','snapshot.r62db'),'utf8'),'ENCRYPTED_SYNTHETIC_DATA_NO_SECRETS');
  for(const entry of manifest.entries){
@@ -56,11 +57,11 @@ try{
  writeFileSync(path.join(target,'web','fixture'),'CORRUPTED');
  blocked(()=>verifyStage(target),'HASH_MISMATCH');
  writeFileSync(path.join(target,'web','fixture'),'synthetic-web');
- assert.equal(verifyStage(target).files,6);
+ assert.equal(verifyStage(target).files,7);
  writeFileSync(path.join(target,'unexpected'),'EXTRA');
  blocked(()=>verifyStage(target),'EXTRA_OR_MISSING_FILE');
  rmSync(path.join(target,'unexpected'));
- assert.equal(verifyStage(target).files,6);
+ assert.equal(verifyStage(target).files,7);
  writeFileSync(components.database.path,'TAMPER');
  blocked(()=>prepare({cfg,lab,mode:'plan'}),'SEVEN_COMPONENTS_NOT_VERIFIED');
  assert.equal(readdirSync(lab).filter(x=>x.startsWith('.r62-staging-')).length,0);
