@@ -2,7 +2,7 @@
 # Never fetches executable files. Does not create a persistent service.
 [CmdletBinding()]
 param(
- [ValidateSet('STATUS','SELFTEST_ONCE','STOP_INSTRUCTIONS','CLEAN6_READINESS','CLEAN6_LOCATE_ERROR')][string]$Mode='STATUS',
+ [ValidateSet('STATUS','SELFTEST_ONCE','STOP_INSTRUCTIONS','CLEAN6_READINESS','CLEAN6_LOCATE_ERROR','CLEAN6_TRIAGE')][string]$Mode='STATUS',
  [string]$InstallDirectory=(Join-Path $env:LOCALAPPDATA 'ROTA62_BridgeV6')
 )
 $ErrorActionPreference='Stop'
@@ -30,6 +30,11 @@ switch($Mode){
    $loc=Join-Path $root 'scripts\Locate-Clean6ErrorMarkers.ps1'
    if(-not(Test-Path -LiteralPath $loc -PathType Leaf)){Write-Output '[BLOQUEADO] CLEAN6_LOCATOR_NOT_STAGED'; exit 2}
    & $loc
+ }
+ 'CLEAN6_TRIAGE' {
+   $triage=Join-Path $root 'scripts\Invoke-Clean6Triage.ps1'
+   if(-not(Test-Path -LiteralPath $triage -PathType Leaf)){Write-Output '[BLOQUEADO] CLEAN6_TRIAGE_NOT_STAGED'; exit 2}
+   & $triage
  }
  'STOP_INSTRUCTIONS' {
    Write-Output '[INFO] INSTALLER_DID_NOT_CREATE_BACKGROUND_SERVICE'
