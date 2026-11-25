@@ -17,7 +17,7 @@ WITH target AS (
     ) FROM aclexplode(t.nspacl) x),'NONE')
  FROM target t
  UNION ALL
- SELECT 'TABLE|'||c.relname||'|'||c.relkind||'|'||pg_get_userbyid(c.relowner)||'|'||
+ SELECT 'TABLE|'||c.relname||'|'||c.relkind::text||'|'||pg_get_userbyid(c.relowner)||'|'||
         c.relrowsecurity::text||'|'||c.relforcerowsecurity::text
  FROM pg_class c JOIN target n ON n.oid=c.relnamespace
  WHERE c.relkind IN ('r','p','v','m','S','f')
@@ -52,7 +52,7 @@ WITH target AS (
  LEFT JOIN pg_class cl ON cl.oid=c.conrelid
  JOIN target n ON n.oid=c.connamespace
  UNION ALL
- SELECT 'POLICY|'||c.relname||'|'||p.polname||'|'||p.polcmd||'|'||
+ SELECT 'POLICY|'||c.relname||'|'||p.polname||'|'||p.polcmd::text||'|'||
         p.polpermissive::text||'|'||
         COALESCE(pg_get_expr(p.polqual,p.polrelid),'NONE')||'|'||
         COALESCE(pg_get_expr(p.polwithcheck,p.polrelid),'NONE')||'|'||
@@ -61,7 +61,7 @@ WITH target AS (
          FROM unnest(p.polroles) AS y(oid))
  FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN target n ON n.oid=c.relnamespace
  UNION ALL
- SELECT 'DEFAULT_ACL|'||pg_get_userbyid(a.defaclrole)||'|'||a.defaclobjtype||'|'||
+ SELECT 'DEFAULT_ACL|'||pg_get_userbyid(a.defaclrole)||'|'||a.defaclobjtype::text||'|'||
   COALESCE((SELECT string_agg(
     CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END
     ||':'||x.privilege_type||':'||x.is_grantable::text||':'||pg_get_userbyid(x.grantor),
