@@ -1,0 +1,52 @@
+name: Guardian V5.4 authenticated archive TOC in networkless PG17
+on:
+  push:
+    paths:
+      - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - .github/workflows/guardian-v54-catalog.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - .github/workflows/guardian-v54-catalog.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-synthetic-toc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create real synthetic PG17 custom dump, validate AES-GCM and no-network pg_restore TOC
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/GuardianV54-ArchiveCatalog.mjs
+          docker pull postgres:17 >/dev/null
+          src=guardian_v54_synthetic_$$
+          root=$(mktemp -d)
+          trap 'docker rm -f "$src" >/dev/null 2>&1 || true; rm -rf "$root"' EXIT
+          docker run -d --name "$src" --network none -e POSTGRES_PASSWORD=ci_synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
+          for i in $(seq 1 50); do
+            if docker exec --user postgres "$src" psql -X -qAt -w -U postgres -d fixture -c 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
+            sleep 1
+          done
+          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true);"
+          docker exec --user postgres "$src" pg_dump -Fc -w -U postgres -d fixture > "$root/synthetic.dump"
+          node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
+          if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
+          echo 'V54_DOCKER_NETWORKLESS_PG_RESTORE_LIST=PASS'
+  windows-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows syntax and safe argument rejection
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV54-ArchiveCatalog.mjs
+          if($LASTEXITCODE -ne 0){throw 'Node parser failed'}
+          $out=@(node scripts/GuardianV54-ArchiveCatalog.mjs --archive missing)
+          if($LASTEXITCODE -ne 2 -or ($out -join ' ') -notmatch 'STATUS=BLOCKED_ERROR_REDACTED'){throw 'Must reject unsafe CLI'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V54_WINDOWS_SYNTAX_AND_FAIL_CLOSED=PASS'
