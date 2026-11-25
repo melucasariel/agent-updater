@@ -3,6 +3,7 @@
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security -ErrorAction Stop
 $root = Join-Path $env:LOCALAPPDATA 'ROTA62_Guardian_AutoSend'
 $agent = Join-Path $root 'GuardianAgent_v3.ps1'
 $updater = Join-Path $root 'GuardianUpdater.ps1'
@@ -22,7 +23,7 @@ try {
     $publicXml = $rsa.ToXmlString($false)
     $bytes = [Text.Encoding]::UTF8.GetBytes($privateXml)
     try {
-      $encrypted = [Security.Cryptography.ProtectedData]::Protect($bytes, $null, [Security.Cryptography.DataProtectionScope]::CurrentUser)
+      $encrypted = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
       [IO.File]::WriteAllBytes($privateFile, $encrypted)
       [IO.File]::WriteAllText($publicFile, $publicXml, (New-Object Text.UTF8Encoding($false)))
     } finally { [Array]::Clear($bytes,0,$bytes.Length) }
