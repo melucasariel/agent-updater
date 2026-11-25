@@ -94,7 +94,7 @@ try{
  if(-not (DockerQuiet ($base+$initArguments))){throw 'INITDB_FAILED_CHECK_DISPOSABLE_VOLUME_BEFORE_RETRY'}
  $r.Add('[OK] INITDB_COMPLETED_WITH_ENTRYPOINT_BYPASSED')
  $stage='VALIDATE'
- $verify='set -eu; test -f "$PGDATA/PG_VERSION"; grep -qx 17 "$PGDATA/PG_VERSION"; test -f "$PGDATA/pg_hba.conf"; grep -Eq "^local[[:space:]]+all[[:space:]]+all[[:space:]]+peer" "$PGDATA/pg_hba.conf"; grep -Eq "^host[[:space:]]+all[[:space:]]+all[[:space:]]+all[[:space:]]+reject" "$PGDATA/pg_hba.conf"'
+ $verify='set -eu; test -f "$PGDATA/PG_VERSION"; grep -qx 17 "$PGDATA/PG_VERSION"; test -f "$PGDATA/pg_hba.conf"; grep -Eq "^local[[:space:]]+all[[:space:]]+all[[:space:]]+peer" "$PGDATA/pg_hba.conf"; grep -Eq "^host[[:space:]]+all[[:space:]]+all[[:space:]]+[^[:space:]]+[[:space:]]+reject" "$PGDATA/pg_hba.conf"'
  if(-not (DockerQuiet ($base+@('--entrypoint','/bin/sh',$image,'-c',$verify)))){throw 'POST_INITDB_VALIDATION_FAILED'}
  $r.Add('[OK] PG_VERSION_17_AND_LOCAL_PEER_HOST_REJECT')
  $r.Add('[OK] NO_DOCKER_START_OF_CLEAN6_OR_PREVIOUS_LABS')
