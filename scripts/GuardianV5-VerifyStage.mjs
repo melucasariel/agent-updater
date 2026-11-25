@@ -18,8 +18,7 @@ function hashFile(p){
 }
 function safeName(n){
  return typeof n==='string'&&n.length>0&&n.length<=600&&!path.isAbsolute(n)&&
-  !n.includes('\\')&&!n.includes('\0')&&n.split('/').every(x=>x!==''&&x!=='.'&&x!=='..')&&
-  /^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/.test(n);
+  !n.includes('\\')&&!n.includes('\0')&&n.split('/').every(x=>x!==''&&x!=='.'&&x!=='..'&& !/[\x00-\x1f:]/.test(x));
 }
 function stagedFiles(root){
  const result=[],queue=[{p:root,rel:''}];let walked=0;
