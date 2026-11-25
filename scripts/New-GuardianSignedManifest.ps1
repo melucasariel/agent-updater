@@ -7,6 +7,7 @@ param(
   [Parameter(Mandatory=$true)][string]$OutputDir
 )
 $ErrorActionPreference='Stop'
+Add-Type -AssemblyName System.Security -ErrorAction Stop
 $root=Join-Path $env:LOCALAPPDATA 'ROTA62_Guardian_AutoSend'
 $privateFile=Join-Path $root 'signing-private.dpapi'
 if (!(Test-Path -LiteralPath $privateFile)){throw 'Run Initialize-GuardianSigning.ps1 locally first.'}
@@ -24,7 +25,7 @@ try{
 $hash=(Get-FileHash -LiteralPath $BundleZip -Algorithm SHA256).Hash.ToLowerInvariant()
 $payload=$Version+"`n"+$BundleUrl+"`n"+$hash
 $protected=[IO.File]::ReadAllBytes($privateFile)
-$plain=[Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser)
+$plain=[System.Security.Cryptography.ProtectedData]::Unprotect($protected,$null,[System.Security.Cryptography.DataProtectionScope]::CurrentUser)
 $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider
 try{
  $rsa.PersistKeyInCsp=$false
