@@ -1,0 +1,42 @@
+name: Bridge V6 offline roundtrip and replay test
+on:
+  push:
+    paths:
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-roundtrip.yml'
+  pull_request:
+    paths:
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-roundtrip.yml'
+permissions:
+  contents: read
+jobs:
+  offline-roundtrip:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate keys, sign, verify, and deny a replay
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
+          $rsa.PersistKeyInCsp=$false
+          try {
+            $private=Join-Path $env:RUNNER_TEMP 'private.xml'
+            $public=Join-Path $env:RUNNER_TEMP 'public.xml'
+            [IO.File]::WriteAllText($private,$rsa.ToXmlString($true))
+            [IO.File]::WriteAllText($public,$rsa.ToXmlString($false))
+            $request=Join-Path $env:RUNNER_TEMP 'request.json'
+            $replay=Join-Path $env:RUNNER_TEMP 'replay'
+            [IO.Directory]::CreateDirectory($replay) | Out-Null
+            $result=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command SELFTEST -PrivateKeyXmlPath $private -OutputPath $request)
+            if($LASTEXITCODE -notin @(0,$null) -or $result -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'signing failed'}
+            $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
+            if($LASTEXITCODE -ne 3 -or $result -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){throw 'first request failed'}
+            $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
+            if($LASTEXITCODE -ne 2 -or $result -notcontains '[BLOQUEADO] REPLAY_OR_STORAGE_ERROR'){throw 'replay not blocked'}
+          } finally {$rsa.Dispose()}
