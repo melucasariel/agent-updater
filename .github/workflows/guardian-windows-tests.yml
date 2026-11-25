@@ -2653,3 +2653,16 @@ jobs:
           $ErrorActionPreference='Stop'
           & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
           if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+
+  major-integration-diagnostics:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run major integration fixture and expose safe diagnostic
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\tests\Test-GuardianMajorIntegration-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^MAJOR_SANDBOX_TESTS_PASSED=7/7$')) {throw 'Major integration fixture failed'}
