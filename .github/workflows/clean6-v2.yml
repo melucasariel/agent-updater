@@ -1,0 +1,47 @@
+name: CLEAN6 V2 safe discovery and staging
+on:
+  push:
+    paths:
+      - 'scripts/Test-Clean6ReadinessV2.ps1'
+      - 'scripts/BridgeV6-Operator.ps1'
+      - 'scripts/Install-BridgeV6.ps1'
+      - '.github/workflows/clean6-v2.yml'
+  pull_request:
+    paths:
+      - 'scripts/Test-Clean6ReadinessV2.ps1'
+      - 'scripts/BridgeV6-Operator.ps1'
+      - 'scripts/Install-BridgeV6.ps1'
+      - '.github/workflows/clean6-v2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clean6-v2:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify PowerShell syntax
+        shell: powershell
+        run: |
+          foreach($f in @('scripts/Test-Clean6ReadinessV2.ps1','scripts/BridgeV6-Operator.ps1','scripts/Install-BridgeV6.ps1')){
+            $t=$null;$e=$null
+            [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f),[ref]$t,[ref]$e)
+            if($e.Count -gt 0){throw ('Parse failure '+$f)}
+          }
+      - name: Verify read-only diagnostic and synthetic audit
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-v2-fixture'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          $audit=Join-Path $root 'R62-Clean6-Semantics-v141.mjs'
+          [IO.File]::WriteAllText($audit,'const a = 1;')
+          $report=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath $audit -NoClipboard)
+          if($report -notcontains 'AUDIT_CANDIDATES_FOUND=1'){throw 'Expected audit missing'}
+          if($report -notcontains 'AUDIT_1_NODE_SYNTAX_OK=True'){throw 'Node syntax check failed'}
+          if($report -notcontains 'PRODUCTION_DATABASE_UNTOUCHED=YES'){throw 'Read-only contract missing'}
+          if($report -notcontains 'SEMANTIC_AUDIT_NOT_EXECUTED=YES'){throw 'Audit safeguard missing'}
+          if($report -notcontains 'END_REPORT_OK'){throw 'Report footer missing'}
+          if(($report -join "`n") -match [regex]::Escape($root)){throw 'Local path leaked'}
+          $missing=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath (Join-Path $root 'missing.mjs') -NoClipboard)
+          if($missing -notcontains 'AUDIT_CANDIDATES_FOUND=0'){throw 'Missing-case incorrect'}
