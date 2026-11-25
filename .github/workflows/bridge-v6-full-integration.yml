@@ -47,14 +47,14 @@ jobs:
             $key=Join-Path $root 'public.xml'
             $stage=Join-Path $root 'bridge-install'
             [IO.File]::WriteAllText($key,$rsa.ToXmlString($false))
-            $dry=@(& ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage)
+            $dry=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage)
             if($dry -notcontains '[OK] LOCAL_INSTALL_PREFLIGHT_PASSED'){throw 'Dry run failed'}
             if(Test-Path -LiteralPath (Join-Path $stage 'installed.version')){throw 'Dry run wrote files'}
-            $install=@(& ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
+            $install=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
             if($install -notcontains '[OK] BRIDGE_V6_FILES_STAGED'){throw 'Stage failed'}
-            $status=@(& ./scripts/BridgeV6-Operator.ps1 -Mode STATUS -InstallDirectory $stage)
+            $status=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/BridgeV6-Operator.ps1 -Mode STATUS -InstallDirectory $stage)
             if(($status -join "`n") -notmatch 'STAGED=True'){throw 'Status missing'}
-            $again=@(& ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
+            $again=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
             if($again -notcontains '[BLOQUEADO] EXISTING_INSTALL_REQUIRES_MIGRATION_REVIEW'){throw 'Overwrite guard failed'}
           } finally {$rsa.Dispose()}
       - name: Signed request accepted once, replay blocked
@@ -72,11 +72,11 @@ jobs:
             $state=Join-Path $root 'state'
             [IO.File]::WriteAllText($private,$rsa.ToXmlString($true))
             [IO.File]::WriteAllText($public,$rsa.ToXmlString($false))
-            $signed=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command AUDIT_PREFLIGHT -PrivateKeyXmlPath $private -OutputPath $request)
+            $signed=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/New-BridgeV6SignedRequest.ps1 -Command AUDIT_PREFLIGHT -PrivateKeyXmlPath $private -OutputPath $request)
             if($signed -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'Signer failed'}
-            $output=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            $output=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($output -join "`n") -notmatch 'AUDIT_SCRIPT_' -or ($output -join "`n") -notmatch 'RECEIVER_STOPPED'){throw 'Signed request did not run expected preflight'}
-            $repeat=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            $repeat=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($repeat -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
             $obj=Get-Content -LiteralPath $request -Raw | ConvertFrom-Json
             # Same request ID with a fresh nonce and valid fresh signature is still a replay.
@@ -84,10 +84,10 @@ jobs:
             $payload=@('ROTA62-BRIDGE-V6',$obj.protocol_version,$obj.request_id,$obj.command,$obj.issued_at,$obj.expires_at,$obj.nonce) -join "`n"
             $obj.signature=[Convert]::ToBase64String($rsa.SignData([Text.Encoding]::UTF8.GetBytes($payload),'SHA256'))
             $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
-            $sameId=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            $sameId=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($sameId -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Reused request ID with new nonce accepted'}
             $obj.command='SEMANTICS'
             $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
-            $unsafe=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            $unsafe=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($unsafe -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
           } finally {$rsa.Dispose()}
