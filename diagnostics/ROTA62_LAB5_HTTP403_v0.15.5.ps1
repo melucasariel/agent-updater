@@ -66,6 +66,8 @@ try {
   (D -Arguments @('inspect',$pg,'--format','{{json .HostConfig.PortBindings}}'))
  )
  if($pgInfo[0] -cne 'running' -or $pgInfo[1] -cne $net -or ($pgInfo[2] -cne '{}' -and $pgInfo[2] -cne 'null')){throw 'PG_ISOLATION_UNVERIFIED'}
+ $pgNetworks=ConvertFrom-Json -InputObject (D -Arguments @('inspect',$pg,'--format','{{json .NetworkSettings.Networks}}'))
+ if(@($pgNetworks.PSObject.Properties.Name).Count -ne 1 -or -not $pgNetworks.PSObject.Properties[$net]){throw 'PG_SECONDARY_NETWORK_PRESENT'}
  $stage='EDGE_ISOLATION'
  $edgeInfo=@(
   (D -Arguments @('inspect',$edge,'--format','{{.State.Status}}'))
@@ -75,6 +77,8 @@ try {
   (D -Arguments @('inspect',$edge,'--format','{{.HostConfig.RestartPolicy.Name}}'))
  )
  if($edgeInfo[0] -cne 'running' -or $edgeInfo[1] -cne $net -or ($edgeInfo[2] -cne '{}' -and $edgeInfo[2] -cne 'null') -or $edgeInfo[3] -cne 'true' -or $edgeInfo[4] -cne 'no'){throw 'EDGE_ISOLATION_UNVERIFIED'}
+ $edgeNetworks=ConvertFrom-Json -InputObject (D -Arguments @('inspect',$edge,'--format','{{json .NetworkSettings.Networks}}'))
+ if(@($edgeNetworks.PSObject.Properties.Name).Count -ne 1 -or -not $edgeNetworks.PSObject.Properties[$net]){throw 'EDGE_SECONDARY_NETWORK_PRESENT'}
  $stage='MOUNT_IDENTITY'
  $mountRaw=D -Arguments @('inspect',$edge,'--format','{{json .Mounts}}')
  $mounts=@(ConvertFrom-Json -InputObject $mountRaw)
