@@ -8,7 +8,7 @@ Resumo **anonimizado** do catálogo: TABLE 77, TABLE DATA 73, ACL 210, DEFAULT A
 
 ## Implementado
 
-`scripts/GuardianV55-RecoveryPreflight.mjs` aceita **somente o relatório sanitizado e autenticado** do V5.4. Valida campos, permissões e estados esperados, fingerprint abreviado, soma completa das categorias TOC e proíbe duplicatas, campos desconhecidos e status implausível de produção/restauração. A saída é uma lista de dependências **BLOQUEADAS até evidência verificável**, que não faz SQL, não acessa Docker, não lê o `.r62db` nem recebe senha.
+`scripts/GuardianV55-RecoveryPreflight.mjs` aceita **somente relatórios sanitizados com os campos esperados do V5.4**, mas não verifica sua autenticidade criptográfica. Valida campos, permissões e estados esperados, fingerprint abreviado, soma completa das categorias TOC e proíbe duplicatas, campos desconhecidos e status implausível de produção/restauração. A saída diferencia `CATALOG_REPORT_FIELDS_VALIDATED=YES` de `REPORT_CRYPTOGRAPHIC_AUTHENTICITY=NOT_ATTESTED` e lista dependências **BLOQUEADAS até evidência verificável**, que não faz SQL, não acessa Docker, não lê o `.r62db` nem recebe senha.
 
 Exemplos de dependências bloqueantes: restauração oficial de roles globais, owners, ACLs e DEFAULT ACL; compatibilidade das seis extensões; isolamento de triggers, funções, cron e callbacks externos; conferência de políticas RLS; distinção entre o escopo TABLE 77 vs. pg_class 76; revisão das 13 entradas TOC de tipo ainda não classificado; Storage, Web, API, configurações, cofre de secrets e chave de recuperação externa; ensaio completo com RTO de 4–6 horas.
 
