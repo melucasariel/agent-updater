@@ -32,8 +32,9 @@ jobs:
           // Internal test text intentionally longer than 64 bytes and has no secrets.
           '@|Set-Content -LiteralPath (Join-Path $tempRoot 'backup-postgres.mjs') -Encoding UTF8
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zipFile=Join-Path $tempRoot 'legacy-synthetic.zip'
+          $zipFile=Join-Path $env:RUNNER_TEMP 'legacy-synthetic.zip'
           [IO.Compression.ZipFile]::CreateFromDirectory($tempRoot,$zipFile)
+          Copy-Item -LiteralPath $zipFile -Destination (Join-Path $tempRoot 'legacy-synthetic.zip')
           $out=@(& ./scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1 -SearchRoots @($tempRoot) -NoClipboard)
           $txt=$out -join [Environment]::NewLine
           if($txt -notmatch 'LEGACY_CANDIDATE_FILES=1'){throw 'Candidate missing'}
