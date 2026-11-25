@@ -1,0 +1,42 @@
+name: Guardian V5.3 secure Windows operator regression
+on:
+  push:
+    paths:
+      - scripts/Invoke-GuardianV53-Authenticate.ps1
+      - scripts/GuardianV53-AuthenticateR62DB.mjs
+      - .github/workflows/guardian-v53-windows-auth-operator.yml
+  pull_request:
+    paths:
+      - scripts/Invoke-GuardianV53-Authenticate.ps1
+      - scripts/GuardianV53-AuthenticateR62DB.mjs
+      - .github/workflows/guardian-v53-windows-auth-operator.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-fail-closed:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test parser, SHA auto-find and sanitized report; CI NEVER enters a user password
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $tok=$null;$errors=$null
+          [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/Invoke-GuardianV53-Authenticate.ps1),[ref]$tok,[ref]$errors)
+          if($errors.Count){throw 'PS1 parser failure'}
+          node --check scripts/GuardianV53-AuthenticateR62DB.mjs
+          if($LASTEXITCODE -ne 0){throw 'Node parse failure'}
+          $lab=Join-Path $env:RUNNER_TEMP 'v53-auth-only-synthetic'
+          New-Item -ItemType Directory -Path $lab -Force|Out-Null
+          $bytes=[Text.Encoding]::ASCII.GetBytes("R62DB02`n"+('X'*128))
+          $file=Join-Path $lab 'synthetic.r62db'
+          [IO.File]::WriteAllBytes($file,$bytes)
+          $sha=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash
+          $out=@(& ./scripts/Invoke-GuardianV53-Authenticate.ps1 -ExpectedSha256 $sha -SearchRoots @($lab) -NoClipboard)
+          $text=$out -join "`n"
+          if($text -notmatch 'MATCHING_CIPHERTEXT_COPIES=1'){throw 'Source not detected'}
+          if($text -notmatch 'AUTH_PROCESS_EXIT=BLOCKED'){throw 'Malformed encrypted header should fail closed'}
+          if($text -notmatch 'PLAINTEXT_NOT_SAVED=YES'){throw 'Plaintext safety report missing'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V53_WINDOWS_AUTHENTICATOR_SAFE_OPERATOR_FAILURE=PASS'
