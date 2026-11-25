@@ -1,0 +1,53 @@
+name: Bridge V6 signed request tests
+on:
+  push:
+    paths:
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-signature-tests.yml'
+  pull_request:
+    paths:
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-signature-tests.yml'
+permissions:
+  contents: read
+jobs:
+  signed-request:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sign temporary request, verify and reject tampering
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $rsa = [Security.Cryptography.RSACryptoServiceProvider]::new(2048)
+          $rsa.PersistKeyInCsp = $false
+          try {
+            $key = Join-Path $env:RUNNER_TEMP 'test-public.xml'
+            [IO.File]::WriteAllText($key, $rsa.ToXmlString($false))
+            $issued = [DateTimeOffset]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $expires = [DateTimeOffset]::UtcNow.AddMinutes(3).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $obj = [ordered]@{
+              protocol_version = '6.0'
+              request_id = 'test-request-001'
+              command = 'SELFTEST'
+              issued_at = $issued
+              expires_at = $expires
+              nonce = 'nonce-0123456789abcdefgh'
+              signature = ''
+            }
+            $payload = @('ROTA62-BRIDGE-V6', $obj.protocol_version, $obj.request_id, $obj.command, $obj.issued_at, $obj.expires_at, $obj.nonce) -join "`n"
+            $sig = $rsa.SignData([Text.Encoding]::UTF8.GetBytes($payload), 'SHA256')
+            $obj.signature = [Convert]::ToBase64String($sig)
+            $path = Join-Path $env:RUNNER_TEMP 'request.json'
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $path -Encoding utf8
+            $output = & ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $path -PinnedPublicKeyPath $key
+            if ($LASTEXITCODE -ne 3 -or $output -notcontains '[OK] REQUEST_SIGNATURE_VERIFIED') { throw "Valid signed request rejected" }
+            $obj.command = 'STOP'
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $path -Encoding utf8
+            $output = & ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $path -PinnedPublicKeyPath $key
+            if ($LASTEXITCODE -ne 2 -or $output -notcontains '[BLOQUEADO] SIGNATURE_VERIFICATION_FAILED') { throw "Tampering not rejected" }
+            $obj.command = 'SEMANTICS'
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $path -Encoding utf8
+            $output = & ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $path -PinnedPublicKeyPath $key
+            if ($LASTEXITCODE -ne 2 -or $output -notcontains '[BLOQUEADO] DISALLOWED_COMMAND') { throw "Unsafe command not rejected" }
+          } finally { $rsa.Dispose() }
