@@ -20,12 +20,19 @@ function Status([string]$code) {
   Add-Content -LiteralPath $script:LogFile -Value $line -Encoding UTF8
 }
 function ProcessRequest([string]$localPath) {
-  $verified=@(& (Join-Path $PSScriptRoot 'Test-BridgeV6ReplayGuard.ps1') -RequestPath $localPath -PinnedPublicKeyPath $PublicKeyPath -ReplayDirectory (Join-Path $script:StateRoot 'seen'))
+  # Freeze the exact request bytes before verification and dispatch to avoid source-file changes.
+  $rawBytes=[IO.File]::ReadAllBytes([IO.Path]::GetFullPath($localPath))
+  if($rawBytes.Length -gt 4096){ Status 'REQUEST_TOO_LARGE'; return }
+  $snapshot=Join-Path $script:StateRoot ('snapshot-'+[guid]::NewGuid().ToString('N')+'.json')
+  [IO.File]::WriteAllBytes($snapshot,$rawBytes)
+  $verified=@(& (Join-Path $PSScriptRoot 'Test-BridgeV6ReplayGuard.ps1') -RequestPath $snapshot -PinnedPublicKeyPath $PublicKeyPath -ReplayDirectory (Join-Path $script:StateRoot 'seen'))
   $code=$LASTEXITCODE
   if($code -ne 3 -or $verified -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){
+    Remove-Item -LiteralPath $snapshot -Force -ErrorAction SilentlyContinue
     Status 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'; return
   }
-  $req=Get-Content -LiteralPath $localPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  $req=Get-Content -LiteralPath $snapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+  Remove-Item -LiteralPath $snapshot -Force -ErrorAction SilentlyContinue
   switch -CaseSensitive ([string]$req.command) {
     'SELFTEST' {
       $docker=Get-Command docker -ErrorAction SilentlyContinue
