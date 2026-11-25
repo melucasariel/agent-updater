@@ -18,3 +18,18 @@ Do not infer backup correctness from this check. Before declaring successful rec
 
 ## Automated chat return
 Not available with the current GitHub connector. It can write GitHub artifacts but does not grant ChatGPT direct access to local PowerShell output. Do not publish local diagnostics to this public repo or imply that clipboard copying automatically sends anything to this chat.
+
+## 2026-11-25 usability upgrade: CLEAN6 readiness V2
+
+New script: `scripts/Test-Clean6ReadinessV2.ps1`. Compared with the first version, this checks a small set of known Windows locations for **exact** audit script names (bounded at 80 immediate child directories per root). Optional `-AuditScriptPath` targets an already known script location, avoiding discovery. It reports candidate counts, file size, SHA-256 and Node syntax; never prints filenames, paths, file contents or credentials. It copies a safe report to the clipboard by default, unless `-NoClipboard` is set.
+
+The guarded installer now stages the V2 diagnostic and operator. On a *locally installed, reviewed* version, `BridgeV6-Operator.ps1 -Mode CLEAN6_READINESS` invokes it. This does not execute the semantic audit, decrypt backups, connect to databases, or return data to ChatGPT automatically.
+
+### Interpretation
+- `AUDIT_CANDIDATES_FOUND=0`: no exact-named candidate in the bounded scan. **Not proof of absence** elsewhere.
+- `AUDIT_*_NODE_SYNTAX_OK=False`: syntax check failed for that particular candidate; investigate local errors without copying sensitive script contents.
+- `PRODUCTION_DATABASE_UNTOUCHED=YES`: diagnostic code does not issue writes; **not independent evidence about other processes**.
+- `END_REPORT_OK`: report completed; not a successful backup restoration verdict.
+
+### Remaining blocked semantic audit
+Treat `LOCAL_ERROR_REDACTED` as unresolved. The real error source cannot be proven from the sanitized report alone. No owner/ACL correctness or unconditional `ROLLBACK` evidence has been obtained. Next require the local report from V2 and inspection of the actual audit script, without passwords.
