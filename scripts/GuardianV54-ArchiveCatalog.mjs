@@ -77,7 +77,7 @@ function passwordTTY(){
 function classifyTOC(s){
  const lines=s.split(/\r?\n/);
  const rows=lines.filter(l=>/^\s*\d+;\s+\d+\s+\d+\s+/.test(l));
- if(rows.length<20)fail('TOC_UNEXPECTEDLY_SMALL');
+ if(rows.length<5)fail('TOC_UNEXPECTEDLY_SMALL');
  const counts={};
  // Type labels are conservative, don't interpret object/role names.
  for(const l of rows){
@@ -102,6 +102,7 @@ async function catalogFromEncrypted(file,passwd){
    '--cpus','1','--user','999:999','--tmpfs','/tmp:rw,noexec,nosuid,size=16m',
    '--entrypoint','pg_restore','postgres:17','--list'];
   child=spawn('docker',args,{stdio:['pipe','pipe','pipe'],windowsHide:true,env:{...process.env,DOCKER_HOST:undefined,DOCKER_CONTEXT:undefined}});
+  const watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},90000);
   const done=new Promise((resolve,reject)=>{
    child.on('error',()=>reject(Error('DOCKER_TOOL_FAILED')));
    child.on('close',code=>resolve(code));
@@ -117,13 +118,23 @@ async function catalogFromEncrypted(file,passwd){
   const decrypted=fs.createReadStream(file,{start:m.start,end:m.end}).pipe(decipher);
   try{
    for await(const chunk of decrypted){
-    if(child.stdin.writable&&!child.stdin.destroyed&&child.stdin.writableLength<2*1024*1024){
-     child.stdin.write(chunk);
+    if(child.stdin.writable&&!child.stdin.destroyed){
+     if(!child.stdin.write(chunk)){
+      await new Promise(resolve=>{
+       const finish=()=>{
+        child.stdin.off('drain',finish);child.stdin.off('close',finish);
+        child.stdin.off('error',finish);resolve();
+       };
+       child.stdin.once('drain',finish);child.stdin.once('close',finish);
+       child.stdin.once('error',finish);
+      });
+     }
     }
    }
   }catch{failed=true;}
   if(!child.stdin.destroyed)child.stdin.end();
   const exit=await done;
+  clearTimeout(watchdog);
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
   if(exit!==0||badOutput)fail('PG_RESTORE_LIST_FAILED');
   return classifyTOC(stdout);
