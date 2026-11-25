@@ -152,6 +152,7 @@ export async function examine(file,sha,password){
 export async function main(argv){
  const p=cliOptions(argv);
  // Fail closed before password. Never execute archiver until full GCM authentication.
+ localDocker(); // No password prompt unless a local, preloaded, networkless pg_restore runtime exists.
  const pass=await passwordTTY();
  const result=await examine(p.archive,p.sha,pass);
  const lines=['=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===',
