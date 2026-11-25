@@ -72,6 +72,7 @@ try {
    } finally {
     $ErrorActionPreference=$priorPreference
    }
+   $global:LASTEXITCODE=0
    Add ('AUDIT_'+($i+1)+'_NODE_SYNTAX_OK') ([string]$syntaxOk)
   }
  }
