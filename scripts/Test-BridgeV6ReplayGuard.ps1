@@ -17,7 +17,8 @@ try {
  $id=([string]$req.request_id).ToLowerInvariant()
  if($id -cnotmatch '^[a-z0-9-]{8,64}$'){Block 'INVALID_REQUEST_ID'}
  $nonce=[string]$req.nonce
- if($nonce -cnotmatch '^[a-zA-Z0-9_-]{16,128}
+ if($nonce -cnotmatch '^[a-zA-Z0-9_-]{16,128}$'){Block 'INVALID_NONCE'}
+ # Reused request IDs are rejected even if a new nonce is signed.
  $sha=[Security.Cryptography.SHA256]::Create()
  $replayKey=([Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("ROTA62-V6-REQUEST-ID|$id")))).Replace('/','_').Replace('+','-').TrimEnd('=')
  $sha.Dispose()
