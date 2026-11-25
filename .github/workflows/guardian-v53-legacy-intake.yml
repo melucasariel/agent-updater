@@ -31,10 +31,14 @@ jobs:
           // Example: pg_restore --no-owner --no-privileges;
           // Internal test text intentionally longer than 64 bytes and has no secrets.
           '@|Set-Content -LiteralPath (Join-Path $tempRoot 'backup-postgres.mjs') -Encoding UTF8
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zipFile=Join-Path $tempRoot 'legacy-synthetic.zip'
+          [IO.Compression.ZipFile]::CreateFromDirectory($tempRoot,$zipFile)
           $out=@(& ./scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1 -SearchRoots @($tempRoot) -NoClipboard)
           $txt=$out -join [Environment]::NewLine
           if($txt -notmatch 'LEGACY_CANDIDATE_FILES=1'){throw 'Candidate missing'}
           if($txt -notmatch 'LEGACY_1_HAS_AES_GCM=TRUE'){throw 'GCM marker missing'}
+          if($txt -notmatch 'ZIP_EMBEDDED_SOURCE_MATCHES=1'){throw 'ZIP source missing'}
           if($txt -notmatch 'LEGACY_1_OWNERSHIP_ACL_OMISSION_RISK=TRUE'){throw 'Risk marker missing'}
           if($txt -notmatch 'SOURCE_EXECUTED=NO'){throw 'Unsafe report'}
           Write-Output 'V53_LEGACY_SOURCE_DISCOVERY_SYNTHETIC=PASS'
