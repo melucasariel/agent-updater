@@ -3,7 +3,8 @@
 [CmdletBinding()]
 param(
  [string]$AuditScriptPath='',
- [switch]$NoClipboard
+ [switch]$NoClipboard,
+ [switch]$SkipDocker
 )
 $ErrorActionPreference='Stop'
 $lines=New-Object 'System.Collections.Generic.List[string]'
@@ -42,7 +43,8 @@ try {
  Add 'NODE_AVAILABLE' ([string][bool]$node)
  $docker=Get-Command docker -ErrorAction SilentlyContinue
  Add 'DOCKER_AVAILABLE' ([string][bool]$docker)
- if($docker){
+ Add 'DOCKER_CHECK_SKIPPED' ([string][bool]$SkipDocker)
+ if($docker -and -not $SkipDocker){
   $null=& docker info --format '{{.ServerVersion}}' 2>$null
   $ok=$LASTEXITCODE -eq 0
   Add 'DOCKER_ENGINE_OK' ([string]$ok)
