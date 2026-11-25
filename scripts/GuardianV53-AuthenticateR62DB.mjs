@@ -103,9 +103,10 @@ async function secretPrompt(){
  });
 }
 function parse(args){
- if(args.length!==4||args[0]!=='--archive'||args[2]!=='--expected-sha256')fail('USAGE');
+ if(![4,6].includes(args.length)||args[0]!=='--archive'||args[2]!=='--expected-sha256')fail('USAGE');
+ if(args.length===6&&(args[4]!=='--report-file'||!path.isAbsolute(args[5])))fail('USAGE');
  if(!path.isAbsolute(args[1])||!hex(args[3]?.toLowerCase(),64))fail('USAGE');
- return {file:args[1],sha:args[3]};
+ return {file:args[1],sha:args[3],reportFile:args.length===6?args[5]:null};
 }
 export async function main(args){
  const p=parse(args);
@@ -115,14 +116,16 @@ export async function main(args){
  if(found!==p.sha.toLowerCase())fail('ENCRYPTED_SHA_MISMATCH');
  const pass=await secretPrompt();
  const data=await authenticate(p.file,p.sha,pass);
- console.log(['=== ROTA62 GUARDIAN V5.3 AES-GCM AUTHENTICATION ===',
+ const report=['=== ROTA62 GUARDIAN V5.3 AES-GCM AUTHENTICATION ===',
   'SOURCE_FORMAT=R62DB02','EXPECTED_SHA256_MATCH=YES','AES_GCM_TAG_AUTHENTICATED=YES',
   'DECRYPTED_PG_CUSTOM_HEADER=YES','DECRYPTED_BYTES='+data.bytes,
   'DECRYPTED_SHA16='+data.plainSha256.slice(0,16).toUpperCase(),
   'ENCRYPTED_BYTES='+metadata.bytes,
   'PLAINTEXT_FILE_CREATED=NO','DATABASE_RESTORED=NO','ROLES_ACL_RESTORED=NO',
   'NO_DOCKER_SQL_CLOUD_OPERATIONS=YES','PRODUCTION_TOUCHED=NO',
-  'RECOVERY_RTO_PROVEN=NO','END_REPORT_OK'].join('\n'));
+  'RECOVERY_RTO_PROVEN=NO','END_REPORT_OK'].join('\n');
+ if(p.reportFile)fs.writeFileSync(p.reportFile,report+'\n',{flag:'wx',mode:0o600});
+ console.log(report);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  main(process.argv.slice(2)).catch(e=>{
@@ -130,9 +133,14 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
    'TRUNCATED_HEADER','INVALID_HEADER_JSON','UNSUPPORTED_HEADER','MISSING_TAG',
    'EXPECTED_SHA_INVALID','EMPTY_PASSWORD','ENCRYPTED_SHA_MISMATCH','AUTHENTICATION_FAILED',
    'PLAINTEXT_SIZE_LIMIT','NOT_PG_CUSTOM_DUMP','CIPHERTEXT_CHANGED','TTY_REQUIRED','CANCELLED'];
-  console.log('=== ROTA62 GUARDIAN V5.3 AES-GCM AUTHENTICATION ===\nSTATUS=BLOCKED_'+
+  const safe='=== ROTA62 GUARDIAN V5.3 AES-GCM AUTHENTICATION ===\nSTATUS=BLOCKED_'+
    (known.includes(e.message)?e.message:'ERROR_REDACTED')+
-   '\nPLAINTEXT_FILE_CREATED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');
+   '\nPLAINTEXT_FILE_CREATED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK';
+  const a=process.argv.slice(2);
+  if(a.length===6&&a[4]==='--report-file'&&path.isAbsolute(a[5])){
+   try{fs.writeFileSync(a[5],safe+'\n',{flag:'wx',mode:0o600});}catch{}
+  }
+  console.log(safe);
   process.exitCode=2;
  });
 }
