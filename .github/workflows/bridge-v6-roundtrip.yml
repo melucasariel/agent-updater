@@ -34,7 +34,7 @@ jobs:
             $request=Join-Path $env:RUNNER_TEMP 'request.json'
             $replay=Join-Path $env:RUNNER_TEMP 'replay'
             [IO.Directory]::CreateDirectory($replay) | Out-Null
-            $result=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command SELFTEST -PrivateKeyXmlPath $private -OutputPath $request)
+            $result=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/New-BridgeV6SignedRequest.ps1 -Command SELFTEST -PrivateKeyXmlPath $private -OutputPath $request)
             if($LASTEXITCODE -notin @(0,$null) -or $result -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'signing failed'}
             # A different public key must never authenticate the request.
             $wrongRsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
@@ -42,11 +42,11 @@ jobs:
             try {
               $wrongPublic=Join-Path $env:RUNNER_TEMP 'wrong-public.xml'
               [IO.File]::WriteAllText($wrongPublic,$wrongRsa.ToXmlString($false))
-              $bad=@(& ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $request -PinnedPublicKeyPath $wrongPublic)
+              $bad=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $request -PinnedPublicKeyPath $wrongPublic)
               if($LASTEXITCODE -ne 2 -or $bad -contains '[OK] REQUEST_SIGNATURE_VERIFIED'){throw 'wrong key accepted'}
             } finally {$wrongRsa.Dispose()}
-            $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
+            $result=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
             if($LASTEXITCODE -ne 3 -or $result -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){throw 'first request failed'}
-            $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
+            $result=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
             if($LASTEXITCODE -ne 2 -or $result -notcontains '[BLOQUEADO] REPLAY_OR_STORAGE_ERROR'){throw 'replay not blocked'}
           } finally {$rsa.Dispose()}
