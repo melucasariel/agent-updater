@@ -46,7 +46,49 @@ try {
   $code=$LASTEXITCODE
   if($output.Count -gt 100 -or $output.Count -eq 0){throw 'INVALID_REPORT'}
   foreach($line in $output){
-    if($line -match '^[A-Z0-9_]+=[A-Z0-9_]+$' -or $line -match '^[A-Z0-9_]+=\d+$' -or $line -match '^=== ROTA62 GUARDIAN V5\.2 ENCRYPTED RECOVERY INPUT GATE ===$'){$report.Add([string]$line)}
+    if($line -eq 'END_REPORT_OK' -or $line -match '^[A-Z0-9_]+=[A-Z0-9_]+{$report.Add([string]$line)}
+    else{throw 'INVALID_REPORT'}
+  }
+  if($code -ne 0){$report.Add('AUDIT_EXIT=BLOCKED')}
+  else{$report.Add('AUDIT_EXIT=SUCCESS')}
+}catch{
+  $report.Add('STATUS=BLOCKED_REDACTED')
+}
+$report.Add('PRODUCTION_TOUCHED=NO')
+$report.Add('BACKUP_NOT_DECRYPTED=YES')
+$report.Add('END_OPERATOR_REPORT_OK')
+$text=$report -join [Environment]::NewLine
+Write-Output $text
+if(-not $NoClipboard){try{Set-Clipboard -Value $text}catch{}}
+ -or $line -match '^[A-Z0-9_]+=\d+{$report.Add([string]$line)}
+    else{throw 'INVALID_REPORT'}
+  }
+  if($code -ne 0){$report.Add('AUDIT_EXIT=BLOCKED')}
+  else{$report.Add('AUDIT_EXIT=SUCCESS')}
+}catch{
+  $report.Add('STATUS=BLOCKED_REDACTED')
+}
+$report.Add('PRODUCTION_TOUCHED=NO')
+$report.Add('BACKUP_NOT_DECRYPTED=YES')
+$report.Add('END_OPERATOR_REPORT_OK')
+$text=$report -join [Environment]::NewLine
+Write-Output $text
+if(-not $NoClipboard){try{Set-Clipboard -Value $text}catch{}}
+ -or $line -match '^=== ROTA62 GUARDIAN V5\.2 ENCRYPTED RECOVERY INPUT GATE ==={$report.Add([string]$line)}
+    else{throw 'INVALID_REPORT'}
+  }
+  if($code -ne 0){$report.Add('AUDIT_EXIT=BLOCKED')}
+  else{$report.Add('AUDIT_EXIT=SUCCESS')}
+}catch{
+  $report.Add('STATUS=BLOCKED_REDACTED')
+}
+$report.Add('PRODUCTION_TOUCHED=NO')
+$report.Add('BACKUP_NOT_DECRYPTED=YES')
+$report.Add('END_OPERATOR_REPORT_OK')
+$text=$report -join [Environment]::NewLine
+Write-Output $text
+if(-not $NoClipboard){try{Set-Clipboard -Value $text}catch{}}
+){$report.Add([string]$line)}
     else{throw 'INVALID_REPORT'}
   }
   if($code -ne 0){$report.Add('AUDIT_EXIT=BLOCKED')}
