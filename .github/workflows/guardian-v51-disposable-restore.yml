@@ -47,7 +47,15 @@ jobs:
           grep -q 'DOCKER_RESOURCES_CLEANED=YES' "$lab/result.txt"
           if node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 0000000000000000000000000000000000000000000000000000000000000000 --expected-tables 1 >"$lab/rejected"; then exit 1; fi
           grep -q 'BLOCKED_FIXTURE_HASH_MISMATCH' "$lab/rejected"
+          # Missing database roles must abort; never silently discard grants.
+          docker exec --user postgres "$src" psql -X -q -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE ROLE fixture_reader NOLOGIN; GRANT SELECT ON public.synthetic_events TO fixture_reader;"
+          docker exec --user postgres "$src" pg_dump -Fc -U postgres -d fixture >"$lab/fixture.dump"
+          sha_roles=$(sha256sum "$lab/fixture.dump" | cut -d' ' -f1)
+          if node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 "$sha_roles" --expected-tables 1 >"$lab/roles-failed"; then exit 1; fi
+          grep -q 'FAILED_AT=RESTORE_SYNTHETIC_ARCHIVE' "$lab/roles-failed"
+          if docker ps -a --filter label=r62.guardian.lab=disposable-v51 --format '{{.ID}}' | grep -q .; then exit 1; fi
           echo 'DISPOSABLE_PG17_ACTUAL_RESTORE_AND_CLEANUP=PASS'
+          echo 'MISSING_ROLE_RESTORE_FAILS_CLOSED=PASS'
   Windows-safety-smoke:
     runs-on: windows-latest
     steps:
