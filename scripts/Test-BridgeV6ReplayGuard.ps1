@@ -37,23 +37,3 @@ try {
 } catch {
  Block 'REPLAY_GUARD_ERROR'
 }
-){Block 'INVALID_NONCE'}
- # Replay is keyed by request_id alone: reusing the ID with a different nonce is still blocked.
- $sha=[Security.Cryptography.SHA256]::Create()
- $replayKey=([Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("ROTA62-V6-REQUEST-ID|$id")))).Replace('/','_').Replace('+','-').TrimEnd('=')
- $sha.Dispose()
- $file=Join-Path $directory ($replayKey+'.seen')
- # Atomic creation: a successful open is a reservation, and any existing file denies replay.
- $stream=[IO.File]::Open($file,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
- try {
-  $bytes=[Text.Encoding]::UTF8.GetBytes([string]$req.expires_at)
-  $stream.Write($bytes,0,$bytes.Length)
- } finally {$stream.Dispose()}
- Write-Output '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'
- Write-Output '[BLOQUEADO] NO_COMMAND_EXECUTION_TRANSPORT_NOT_CONFIGURED'
- exit 3
-} catch [IO.IOException] {
- Block 'REPLAY_OR_STORAGE_ERROR'
-} catch {
- Block 'REPLAY_GUARD_ERROR'
-}
