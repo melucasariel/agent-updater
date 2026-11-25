@@ -55,7 +55,19 @@ jobs:
           set -e
           test "$bad_exit" -eq 1
           [[ "$bad" == *"MISSING_ACLS=1"* ]]
+          # In a disposable database, prove an ACL write inside BEGIN is undone by ROLLBACK.
+          docker exec "$cid" psql -U postgres -d clean6_lab_ci -X -v ON_ERROR_STOP=1 -q -c "BEGIN; GRANT SELECT ON clean6_fixture.sample TO fixture_reader; ROLLBACK;"
+          docker exec -i "$cid" psql -U postgres -d clean6_lab_ci -X -qAt -v ON_ERROR_STOP=1 -f - < scripts/Export-Clean6Catalog.sql > "$RUNNER_TEMP/after-rollback.json"
+          set +e
+          rollback_report="$(node scripts/Compare-Clean6Semantics.mjs --expected "$RUNNER_TEMP/changed.json" --actual "$RUNNER_TEMP/after-rollback.json")"
+          rollback_exit=$?
+          set -e
+          test "$rollback_exit" -eq 1
+          [[ "$rollback_report" == *"CONTENT_MATCH=YES"* ]]
+          [[ "$rollback_report" == *"MISSING_ACLS=0"* ]]
+          [[ "$rollback_report" == *"EXTRA_ACLS=0"* ]]
           # Never print catalog JSON, names or roles.
           echo "PG17_CATALOG_READ_ONLY_EXPORT=PASS"
           echo "ACL_MUTATION_DETECTED=PASS"
+          echo "SYNTHETIC_ACL_ROLLBACK_PRESERVED_STATE=PASS"
           echo "PRODUCTION_ACCESSED=NO"
