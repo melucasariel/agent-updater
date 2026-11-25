@@ -2,7 +2,7 @@
 # Never fetches executable files. Does not create a persistent service.
 [CmdletBinding()]
 param(
- [ValidateSet('STATUS','SELFTEST_ONCE','STOP_INSTRUCTIONS')][string]$Mode='STATUS',
+ [ValidateSet('STATUS','SELFTEST_ONCE','STOP_INSTRUCTIONS','CLEAN6_READINESS')][string]$Mode='STATUS',
  [string]$InstallDirectory=(Join-Path $env:LOCALAPPDATA 'ROTA62_BridgeV6')
 )
 $ErrorActionPreference='Stop'
@@ -20,6 +20,11 @@ switch($Mode){
  'SELFTEST_ONCE' {
    if(-not(Test-Path -LiteralPath $agent) -or -not(Test-Path -LiteralPath $key)){Write-Output '[BLOQUEADO] AGENT_NOT_STAGED'; exit 2}
    & $agent -PublicKeyPath $key -StateDirectory (Join-Path $root 'state') -Once
+ }
+ 'CLEAN6_READINESS' {
+   $check=Join-Path $root 'scripts\Test-Clean6ReadinessV2.ps1'
+   if(-not (Test-Path -LiteralPath $check -PathType Leaf)){Write-Output '[BLOQUEADO] CLEAN6_DIAGNOSTIC_NOT_STAGED'; exit 2}
+   & $check
  }
  'STOP_INSTRUCTIONS' {
    Write-Output '[INFO] INSTALLER_DID_NOT_CREATE_BACKGROUND_SERVICE'
