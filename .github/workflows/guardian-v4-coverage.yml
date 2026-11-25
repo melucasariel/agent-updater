@@ -1,0 +1,62 @@
+name: Guardian V4 seven-component gate
+on:
+  push:
+    paths:
+      - scripts/GuardianV4-Coverage.mjs
+      - .github/workflows/guardian-v4-coverage.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV4-Coverage.mjs
+      - .github/workflows/guardian-v4-coverage.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Full synthetic coverage and tamper rejection
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/GuardianV4-Coverage.mjs
+          mkdir -p /tmp/r62-v4/{web,api,storage}
+          printf 'synthetic encrypted fixture' >/tmp/r62-v4/database.r62db
+          printf 'synthetic web' >/tmp/r62-v4/web/index.html
+          printf 'synthetic api' >/tmp/r62-v4/api/index.ts
+          printf 'synthetic storage' >/tmp/r62-v4/storage/record.mock
+          printf 'synthetic dns' >/tmp/r62-v4/dns.json
+          printf 'synthetic config' >/tmp/r62-v4/config.json
+          printf 'synthetic vault marker' >/tmp/r62-v4/vault.age
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import crypto from 'node:crypto';
+          const root='/tmp/r62-v4/';
+          const components={};
+          const files={database:'database.r62db',dns:'dns.json',config:'config.json','secrets-vault':'vault.age'};
+          for(const [role,filename] of Object.entries(files))components[role]={kind:'file',path:root+filename};
+          for(const role of ['web','api','storage'])components[role]={kind:'directory',path:root+role};
+          components.database.sha256=crypto.createHash('sha256').update(fs.readFileSync(root+'database.r62db')).digest('hex');
+          fs.writeFileSync(root+'input.json',JSON.stringify({format:'r62-guardian-v4-input-1',components}));
+          JS
+          node scripts/GuardianV4-Coverage.mjs --mode plan --config /tmp/r62-v4/input.json | grep STATUS=CONFIG_SCHEMA_VALID
+          node scripts/GuardianV4-Coverage.mjs --mode verify --config /tmp/r62-v4/input.json | tee /tmp/r62-v4/result
+          grep -q 'COMPONENTS_VERIFIED=7/7' /tmp/r62-v4/result
+          grep -q 'FILE_COVERAGE_GATE=PASS' /tmp/r62-v4/result
+          printf 'tampered' >> /tmp/r62-v4/database.r62db
+          if node scripts/GuardianV4-Coverage.mjs --mode verify --config /tmp/r62-v4/input.json >/tmp/r62-v4/failed; then exit 1; fi
+          grep -q 'DATABASE_HASH_MISMATCH' /tmp/r62-v4/failed
+          echo 'V4_GATE_SYNTHETIC_PASS'
+  windows-cli:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows parser and fail-closed test
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV4-Coverage.mjs
+          if ($LASTEXITCODE -ne 0){throw 'Node syntax'}
+          $output=@(node scripts/GuardianV4-Coverage.mjs --mode invalid --config missing)
+          if($LASTEXITCODE -ne 2 -or ($output -join ' ') -notmatch 'STATUS=BLOCKED'){throw 'Fail closed'}
+          Write-Output 'WINDOWS_V4_FAIL_CLOSED_PASS'
