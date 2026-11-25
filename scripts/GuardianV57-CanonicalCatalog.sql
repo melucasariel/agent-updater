@@ -71,7 +71,7 @@ WITH target AS (
  UNION ALL
  SELECT 'FUNCTION|'||p.proname||'|'||pg_get_function_identity_arguments(p.oid)||'|'||
         pg_get_userbyid(p.proowner)||'|'||p.prosecdef::text||'|'||
-        pg_get_functiondef(p.oid)
+        encode(convert_to(pg_get_functiondef(p.oid),'UTF8'),'hex')
  FROM pg_proc p JOIN target n ON n.oid=p.pronamespace
  UNION ALL
  SELECT 'TRIGGER|'||c.relname||'|'||t.tgname||'|'||pg_get_triggerdef(t.oid,true)
