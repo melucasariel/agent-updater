@@ -22,7 +22,7 @@ function RunDocker {
  param([Parameter(Mandatory=$true)][string[]]$Arguments)
  $lines=@(& docker @Arguments 2>$null)
  if($LASTEXITCODE -ne 0){throw 'DOCKER_NONZERO'}
- return [string]($lines -join [string][char]10).Trim()
+ return (($lines -join [Environment]::NewLine).Trim())
 }
 try {
  $stage='DOCKER_CLI'
