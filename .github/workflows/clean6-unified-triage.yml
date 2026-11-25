@@ -51,3 +51,40 @@ jobs:
           $out=@(& ./scripts/Invoke-Clean6Triage.ps1 -AuditScriptPath $missing -SearchRoot $root -SkipDocker -NoClipboard)
           $joined=$out -join "`n"
           if(-not $joined.Contains('TRIAGE_STATUS=NO_CANDIDATES_IN_BOUNDED_SEARCH')){throw 'Empty case not handled'}
+
+      - name: Invalid JavaScript syntax is reported without source leak
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-invalid'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          $audit=Join-Path $root 'R62-Clean6-Semantics-v141.mjs'
+          [IO.File]::WriteAllText($audit,'function broken( {')
+          $result=@(& ./scripts/Invoke-Clean6Triage.ps1 -AuditScriptPath $audit -SearchRoot $root -SkipDocker -NoClipboard)
+          $joined=$result -join "`n"
+          foreach($expected in @('READINESS_AUDIT_1_NODE_SYNTAX_OK=False','TRIAGE_STATUS=AUDIT_CANDIDATE_IDENTIFIED','ROLLBACK_NOT_TESTED=YES')){
+            if(-not $joined.Contains($expected)){throw ('Missing invalid-syntax marker '+$expected)}
+          }
+          if($joined.Contains('function broken') -or $joined.Contains($root)){throw 'Source content or path leaked'}
+      - name: Marker-only script routes to manual source inspection
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-marker-only'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          [IO.File]::WriteAllText((Join-Path $root 'unknown-script.ps1'),'# LOCAL_ERROR_REDACTED')
+          $out=@(& ./scripts/Invoke-Clean6Triage.ps1 -AuditScriptPath (Join-Path $root 'missing.mjs') -SearchRoot $root -SkipDocker -NoClipboard)
+          $joined=$out -join "`n"
+          foreach($expected in @('READINESS_AUDIT_CANDIDATES_FOUND=0','LOCATOR_FILES_MATCHED=1','TRIAGE_STATUS=ERROR_MARKER_CANDIDATE_IDENTIFIED','NEXT_ACTION=REVIEW_SOURCE_BY_LOCAL_SHA_FINGERPRINT')){
+            if(-not $joined.Contains($expected)){throw ('Missing marker-only branch '+$expected)}
+          }
+      - name: Absent locator component must fail closed
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-missing-component'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          Copy-Item ./scripts/Invoke-Clean6Triage.ps1 (Join-Path $root 'Invoke-Clean6Triage.ps1')
+          $result=@(& (Join-Path $root 'Invoke-Clean6Triage.ps1') -SkipDocker -NoClipboard)
+          if(($result -join "`n") -notmatch 'TRIAGE_STATUS=BLOCKED_MISSING_COMPONENT'){throw 'Failed open on missing component'}
+          if(($result -join "`n") -match 'TRIAGE_STATUS=AUDIT_CANDIDATE_IDENTIFIED'){throw 'Falsely promoted missing-component state'}
