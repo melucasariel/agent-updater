@@ -60,10 +60,20 @@ try {
  if(-not (Get-Command docker -ErrorAction SilentlyContinue)){throw 'DOCKER_CLI_MISSING'}
  if((D -Arguments @('network','inspect',$net,'--format','{{.Internal}}')) -cne 'true'){throw 'LAB_NETWORK_NOT_INTERNAL'}
  $stage='PG_ISOLATION'
- $pgInfo=@(D -Arguments @('inspect',$pg,'--format','{{.State.Status}}'),D -Arguments @('inspect',$pg,'--format','{{.HostConfig.NetworkMode}}'),D -Arguments @('inspect',$pg,'--format','{{json .HostConfig.PortBindings}}'))
+ $pgInfo=@(
+  (D -Arguments @('inspect',$pg,'--format','{{.State.Status}}'))
+  (D -Arguments @('inspect',$pg,'--format','{{.HostConfig.NetworkMode}}'))
+  (D -Arguments @('inspect',$pg,'--format','{{json .HostConfig.PortBindings}}'))
+ )
  if($pgInfo[0] -cne 'running' -or $pgInfo[1] -cne $net -or ($pgInfo[2] -cne '{}' -and $pgInfo[2] -cne 'null')){throw 'PG_ISOLATION_UNVERIFIED'}
  $stage='EDGE_ISOLATION'
- $edgeInfo=@(D -Arguments @('inspect',$edge,'--format','{{.State.Status}}'),D -Arguments @('inspect',$edge,'--format','{{.HostConfig.NetworkMode}}'),D -Arguments @('inspect',$edge,'--format','{{json .HostConfig.PortBindings}}'),D -Arguments @('inspect',$edge,'--format','{{.HostConfig.ReadonlyRootfs}}'),D -Arguments @('inspect',$edge,'--format','{{.HostConfig.RestartPolicy.Name}}'))
+ $edgeInfo=@(
+  (D -Arguments @('inspect',$edge,'--format','{{.State.Status}}'))
+  (D -Arguments @('inspect',$edge,'--format','{{.HostConfig.NetworkMode}}'))
+  (D -Arguments @('inspect',$edge,'--format','{{json .HostConfig.PortBindings}}'))
+  (D -Arguments @('inspect',$edge,'--format','{{.HostConfig.ReadonlyRootfs}}'))
+  (D -Arguments @('inspect',$edge,'--format','{{.HostConfig.RestartPolicy.Name}}'))
+ )
  if($edgeInfo[0] -cne 'running' -or $edgeInfo[1] -cne $net -or ($edgeInfo[2] -cne '{}' -and $edgeInfo[2] -cne 'null') -or $edgeInfo[3] -cne 'true' -or $edgeInfo[4] -cne 'no'){throw 'EDGE_ISOLATION_UNVERIFIED'}
  $stage='MOUNT_IDENTITY'
  $mountRaw=D -Arguments @('inspect',$edge,'--format','{{json .Mounts}}')
