@@ -1,0 +1,34 @@
+name: Guardian V5 isolated lab staging
+on:
+  push:
+    paths:
+      - scripts/GuardianV5-LabStage.mjs
+      - scripts/test-GuardianV5-LabStage.mjs
+      - scripts/GuardianV4-Coverage.mjs
+      - .github/workflows/guardian-v5-lab-stage.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV5-LabStage.mjs
+      - scripts/test-GuardianV5-LabStage.mjs
+      - scripts/GuardianV4-Coverage.mjs
+      - .github/workflows/guardian-v5-lab-stage.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-lab-regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and stage/rollback integrity with synthetic data only
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV5-LabStage.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failed'}
+          node scripts/test-GuardianV5-LabStage.mjs
+          if($LASTEXITCODE -ne 0){throw 'Stage tests failed'}
+          Write-Output 'V5_STAGING_SYNTHETIC_ONLY=PASS'
