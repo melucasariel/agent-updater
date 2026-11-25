@@ -15,6 +15,7 @@ try{
  New-Item -Path $root -ItemType Directory -Force|Out-Null
  $agent=Join-Path $root 'GuardianAgent_v3.ps1'
  $updater=Join-Path $root 'GuardianUpdater.ps1'
+ $labMutex='Local\R62_Guardian_Lab_'+[guid]::NewGuid().ToString('N')
  $legacy=@'
 $ErrorActionPreference='Stop'
 $root=Join-Path $env:LOCALAPPDATA 'ROTA62_Guardian_AutoSend'
@@ -27,6 +28,7 @@ try{
  while(-not (Test-Path -LiteralPath $stop)){Start-Sleep -Milliseconds 150}
 }finally{try{$mutex.ReleaseMutex()}catch{};$mutex.Dispose()}
 '@
+ $legacy=$legacy.Replace('Local\ROTA62_Guardian_V3_Instance',$labMutex)
  WriteUtf8 $agent $legacy
  WriteUtf8 $updater "Write-Output 'legacy updater'"
  WriteUtf8 (Join-Path $root 'update_source.json') '{"manifest_url":"","public_key_xml":""}'
@@ -39,6 +41,7 @@ try{
  $uHash=(Get-FileHash -LiteralPath $updater -Algorithm SHA256).Hash
  $script=$script.Replace('84F9440890F1DBB550F0C57833ECD485E685839B8323B995147759A4090F9CE8',$aHash)
  $script=$script.Replace('9BE00D02A49457AC3A05B732F6746174241B5C545B6131368DF436604A914E0E',$uHash)
+ $script=$script.Replace('Local\ROTA62_Guardian_V3_Instance',$labMutex)
  WriteUtf8 $test $script
  $before=(Get-FileHash -LiteralPath $agent -Algorithm SHA256).Hash
  $result=@(& $test -DryRun 2>&1)
