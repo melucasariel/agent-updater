@@ -36,3 +36,10 @@ node .\scripts\GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root $l
 4. Gerar relatório de ensaio integral cronometrado, com hash do backup e versão testada e sem secrets; publicar apenas após aprovação separada.
 
 **Resultado de testes automatizados é evidência exclusivamente de fixture sintético, nunca do TaxiRadar real.**
+## Teste aprovado em PostgreSQL 17 descartável (2026-11-25)
+
+O workflow `.github/workflows/guardian-v51-disposable-restore.yml` demonstrou restauração efetiva de um **dump sintético custom** em um banco novo: 1 tabela, 2 índices, 1 política RLS e 1 tabela com RLS habilitado. O restore confirma versão 17, lê o catálogo em transação READ ONLY e remove o container e a rede/volume temporários. Um segundo fixture contendo `GRANT` para role inexistente foi corretamente **recusado**; o teste confirmou a ausência de containers temporários após a falha. O teste de Windows aprovou a sintaxe e o comportamento fail-closed. Este ensaio não utiliza qualquer dado do TaxiRadar.
+
+O restaurador agora rejeita contexto Docker remoto e só aceita o contexto local padrão ou `desktop-linux` com endpoint local Unix/npipe. Ele espera quatro conexões SQL sucessivas ao banco-alvo para não cair na janela do servidor temporário de inicialização do Postgres. A saída informa falhas com nome de etapa conhecido, sem imprimir logs privados ou senhas.
+
+**Pendente:** descifrar o `.r62db` real, restaurar roles/ACLs em ambiente adequado ao Supabase, testar todas as tabelas e serviços, reinstalar Web/API/Storage e medir tempo real de recuperação. `--expected-tables` é apenas verificação de contagem, não prova de conteúdo, integridade referencial ou autenticação.
