@@ -9,7 +9,7 @@ $ErrorActionPreference='Stop'
 function Block([string]$message){ Write-Output "[BLOQUEADO] $message"; exit 2 }
 try {
  $verify=Join-Path $PSScriptRoot 'Verify-BridgeV6Request.ps1'
- $output=@(& $verify -RequestPath $RequestPath -PinnedPublicKeyPath $PinnedPublicKeyPath)
+ $output=@(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verify -RequestPath $RequestPath -PinnedPublicKeyPath $PinnedPublicKeyPath)
  if($LASTEXITCODE -ne 3 -or $output -notcontains '[OK] REQUEST_SIGNATURE_VERIFIED'){Block 'INVALID_OR_UNAUTHENTICATED_REQUEST'}
  $req=Get-Content -LiteralPath $RequestPath -Raw | ConvertFrom-Json
  $directory=[IO.Path]::GetFullPath($ReplayDirectory)
