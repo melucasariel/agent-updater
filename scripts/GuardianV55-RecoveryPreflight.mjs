@@ -4,7 +4,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import crypto from 'node:crypto';
 
 const expectedHeader='=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===';
 const requiredTrue=[
@@ -90,7 +89,7 @@ function run(argv){
   'ARCHIVE_OBJECTS='+r.items,
   'TABLE_TOC_COUNT='+(r.counts.TABLE??0),
   'TABLE_DATA_TOC_COUNT='+(r.counts.TABLE_DATA??0),
-  'REFERENCE_SCOPED_TABLE_COUNT='+(r.counts.TABLE??0-r.tableDelta),
+  'REFERENCE_SCOPED_TABLE_COUNT='+((r.counts.TABLE??0)-r.tableDelta),
   'TABLE_COUNT_SCOPE_MISMATCH='+(r.signal.tableScopeReview?'REVIEW_REQUIRED':'NO'),
   'TABLE_DATA_IS_NOT_ROW_COUNT=YES',
   'TOC_ACL_ENTRIES='+(r.counts.ACL??0),
