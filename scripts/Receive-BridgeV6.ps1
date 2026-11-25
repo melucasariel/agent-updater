@@ -25,7 +25,7 @@ function ProcessRequest([string]$localPath) {
   if($rawBytes.Length -gt 4096){ Status 'REQUEST_TOO_LARGE'; return }
   $snapshot=Join-Path $script:StateRoot ('snapshot-'+[guid]::NewGuid().ToString('N')+'.json')
   [IO.File]::WriteAllBytes($snapshot,$rawBytes)
-  $verified=@(& (Join-Path $PSScriptRoot 'Test-BridgeV6ReplayGuard.ps1') -RequestPath $snapshot -PinnedPublicKeyPath $PublicKeyPath -ReplayDirectory (Join-Path $script:StateRoot 'seen'))
+  $verified=@(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Test-BridgeV6ReplayGuard.ps1') -RequestPath $snapshot -PinnedPublicKeyPath $PublicKeyPath -ReplayDirectory (Join-Path $script:StateRoot 'seen'))
   $code=$LASTEXITCODE
   if($code -ne 3 -or $verified -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){
     Remove-Item -LiteralPath $snapshot -Force -ErrorAction SilentlyContinue
