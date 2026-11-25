@@ -9,6 +9,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 const fail=s=>{throw Error(s);};
 const image='postgres:17';
+let diagnosticStage='PRECHECK';
 const marker='.rota62-guardian-lab-only';
 const markerText='ROTA62_OFFLINE_LAB_V1\n';
 const sleep=ms=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms);
@@ -63,13 +64,17 @@ export function exercise(o){
  const owned={net:false,vol:false,container:false};
  let result=null;
  try{
+  diagnosticStage='CREATE_INTERNAL_NETWORK';
   docker(['network','create','--internal','--driver','bridge',network]);owned.net=true;
+  diagnosticStage='CREATE_EPHEMERAL_VOLUME';
   docker(['volume','create',volume]);owned.vol=true;
   const pass=crypto.randomBytes(24).toString('hex');
+  diagnosticStage='START_DISPOSABLE_POSTGRES';
   docker(['run','-d','--name',container,'--network',network,'--mount','source='+volume+',target=/var/lib/postgresql/data',
     '--label','r62.guardian.lab=disposable-v51',
     '-e','POSTGRES_PASSWORD='+pass,'-e','POSTGRES_DB=restoretest',image],{timeout:60000});
   owned.container=true;
+  diagnosticStage='WAIT_POSTGRES';
   let ready=false;
   for(let i=0;i<40;i++){
    if(dockerSafe(['exec','--user','postgres',container,'pg_isready','-U','postgres','-d','restoretest'])){ready=true;break;}
@@ -77,6 +82,7 @@ export function exercise(o){
   }
   if(!ready)fail('PG17_NOT_READY');
   // No egress network and no published ports. Do not trust Docker CLI defaults.
+  diagnosticStage='INSPECT_ISOLATION';
   const ci=JSON.parse(docker(['inspect',container]))[0];
   const networks=Object.keys(ci.NetworkSettings?.Networks||{});
   if(networks.length!==1||networks[0]!==network)fail('UNEXPECTED_NETWORK');
@@ -85,9 +91,11 @@ export function exercise(o){
   if(ni.Internal!==true)fail('NETWORK_NOT_INTERNAL');
   // A pg_dump custom archive is SQL-capable. Only use known synthetic dumps.
   // The bytes never leave this ephemeral docker process.
+  diagnosticStage='RESTORE_SYNTHETIC_ARCHIVE';
   const bytes=fs.readFileSync(pre.dump);
   docker(['exec','-i','--user','postgres',container,'pg_restore','--exit-on-error','--single-transaction','--dbname=restoretest', '--username=postgres'],{input:bytes,timeout:180000,maxBuffer:1024*1024});
   const query="BEGIN READ ONLY; SELECT current_setting('server_version_num')||'|'||(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p') AND n.nspname<>'information_schema' AND n.nspname!~'^pg_'); ROLLBACK;";
+  diagnosticStage='CATALOG_POSTCHECK';
   const out=docker(['exec','--user','postgres','-e','PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=10000',container,
     'psql','-X','-qAt','-w','-U','postgres','-d','restoretest','-v','ON_ERROR_STOP=1','-c',query]);
   const match=out.match(/^(\d+)\|(\d+)$/m);
@@ -100,6 +108,7 @@ export function exercise(o){
   if(owned.net)dockerSafe(['network','rm',network]);
  }
  // Verify ephemeral resources are gone after cleanup; fail closed.
+ diagnosticStage='VERIFY_RESOURCE_CLEANUP';
  if(dockerSafe(['container','inspect',container])||dockerSafe(['volume','inspect',volume])||dockerSafe(['network','inspect',network]))fail('RESOURCE_CLEANUP_UNVERIFIED');
  return {...result,cleaned:true};
 }
@@ -125,7 +134,7 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
    'FIXTURE_INVALID','FIXTURE_SIZE_BLOCKED','FIXTURE_HASH_MISMATCH','NOT_CUSTOM_PG_DUMP',
    'PG17_IMAGE_NOT_PRELOADED','DOCKER_ACTION_FAILED','PG17_NOT_READY','UNEXPECTED_NETWORK','PORT_PUBLISHED',
    'NETWORK_NOT_INTERNAL','CATALOG_POSTCHECK_FAILED','RESOURCE_CLEANUP_UNVERIFIED']);
-  console.log('=== ROTA62 GUARDIAN V5.1 DISPOSABLE PG17 RESTORE ===\nSTATUS=BLOCKED_'+(allowed.has(e.message)?e.message:'REDACTED')+
+  console.log('=== ROTA62 GUARDIAN V5.1 DISPOSABLE PG17 RESTORE ===\nSTATUS=BLOCKED_'+(allowed.has(e.message)?e.message:'REDACTED')+'\nFAILED_AT='+diagnosticStage+
   '\nPRODUCTION_TOUCHED=NO\nREAL_R62DB_DECRYPTED=NO\nEND_REPORT_OK');
   process.exitCode=2;
  }
