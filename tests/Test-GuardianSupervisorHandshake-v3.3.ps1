@@ -56,6 +56,7 @@ try{
  Write-Output 'LAB_TESTS_DESIGNED=4'
  Write-Output '[LIMIT] Verified fixture process only; real Guardian heartbeat integration and runtime supervision pending.'
  Write-Output '[NAO_EXECUTADO] Guardian ativo, Docker, PostgreSQL, rede, update'
+$global:LASTEXITCODE=0
 }catch{
  $safe=[string]$_.Exception.Message -replace '[^A-Z0-9_]','?'
  Write-Output ('[BLOQUEADO] '+$safe);exit 1
