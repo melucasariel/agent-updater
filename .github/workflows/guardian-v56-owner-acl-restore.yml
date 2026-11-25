@@ -4,6 +4,7 @@ on:
     paths:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
       - scripts/GuardianV57-CanonicalCatalog.sql
+      - scripts/GuardianV57-CompareCatalog.mjs
   pull_request:
     paths:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
@@ -116,6 +117,9 @@ jobs:
             echo 'V57_CATALOG_SEMANTICS_NOT_EQUAL'
             exit 1
           fi
+          node scripts/GuardianV57-CompareCatalog.mjs --source "$root/catalog-source" --destination "$root/catalog-dest" > "$root/compare-ok"
+          grep -q 'CATALOG_SEMANTIC_FINGERPRINT_MATCH=YES' "$root/compare-ok"
+          echo 'V57_PRIVACY_SAFE_COMPARATOR_MATCH=PASS'
           echo 'V57_CATALOG_SOURCE_DEST_SEMANTICS_SHA256=PASS'
           # Fault injection: a revoked real SELECT privilege MUST alter the fingerprint.
           docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \
@@ -128,6 +132,11 @@ jobs:
             echo 'V57_ACL_FAULT_NOT_DETECTED'
             exit 1
           fi
+          if node scripts/GuardianV57-CompareCatalog.mjs --source "$root/catalog-source" --destination "$root/catalog-tampered" > "$root/compare-failure"; then
+            echo 'V57_COMPARATOR_ACCEPTED_SEMANTIC_ACL_TAMPER'; exit 1
+          fi
+          grep -q 'CATALOG_SEMANTIC_FINGERPRINT_MATCH=NO' "$root/compare-failure"
+          echo 'V57_PRIVACY_SAFE_COMPARATOR_DETECTS_ACL_CHANGE=PASS'
           echo 'V57_REVOKED_ACL_DETECTED=PASS'
           # Both containers are synthetic and are automatically destroyed by cleanup.
           echo 'PG17_RESTORE_OWNER_PRESERVED=PASS'
