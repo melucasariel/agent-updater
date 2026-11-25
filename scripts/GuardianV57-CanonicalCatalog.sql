@@ -3,6 +3,8 @@
 -- Redirect output to a PRIVATE local file, never stdout/logs in actual backups.
 -- Comparison of catalog semantics, not row data, secrets, global role membership or app services.
 BEGIN TRANSACTION READ ONLY;
+-- Stable textual rendering across independent databases with different search_path.
+SET LOCAL search_path TO pg_catalog;
 WITH target AS (
   SELECT oid, nspname, nspowner, nspacl FROM pg_namespace WHERE nspname = :'schema'
 ), facts AS (
@@ -13,7 +15,7 @@ WITH target AS (
    (SELECT string_agg(
      CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END
      ||':'||x.privilege_type||':'||x.is_grantable::text||':'||pg_get_userbyid(x.grantor),
-     ',' ORDER BY x.grantee,x.privilege_type,x.is_grantable,x.grantor
+     ',' ORDER BY CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END,x.privilege_type,x.is_grantable,pg_get_userbyid(x.grantor)
     ) FROM aclexplode(t.nspacl) x),'NONE')
  FROM target t
  UNION ALL
@@ -35,7 +37,7 @@ WITH target AS (
   COALESCE((SELECT string_agg(
     CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END
     ||':'||x.privilege_type||':'||x.is_grantable::text||':'||pg_get_userbyid(x.grantor),
-    ',' ORDER BY x.grantee,x.privilege_type,x.is_grantable,x.grantor
+    ',' ORDER BY CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END,x.privilege_type,x.is_grantable,pg_get_userbyid(x.grantor)
    ) FROM aclexplode(c.relacl) x),'NONE')
  FROM pg_class c JOIN target n ON n.oid=c.relnamespace
  WHERE c.relkind IN ('r','p','v','m','S','f')
@@ -65,7 +67,7 @@ WITH target AS (
   COALESCE((SELECT string_agg(
     CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END
     ||':'||x.privilege_type||':'||x.is_grantable::text||':'||pg_get_userbyid(x.grantor),
-    ',' ORDER BY x.grantee,x.privilege_type,x.is_grantable,x.grantor)
+    ',' ORDER BY CASE WHEN x.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(x.grantee) END,x.privilege_type,x.is_grantable,pg_get_userbyid(x.grantor))
    FROM aclexplode(a.defaclacl) x),'NONE')
  FROM pg_default_acl a JOIN target n ON n.oid=a.defaclnamespace
  UNION ALL
