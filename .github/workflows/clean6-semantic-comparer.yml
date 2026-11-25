@@ -45,4 +45,5 @@ jobs:
           $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $actual
           $bad=@(node ./scripts/Compare-Clean6Semantics.mjs --expected $expected --actual $actual)
           if($LASTEXITCODE -eq 0 -or ($bad -join "`n") -notmatch 'MISSING_ACLS=1'){throw 'ACL deletion was not detected'}
+          $global:LASTEXITCODE=0
           Write-Output 'Synthetic exact, owner-change, ACL-change, ACL-deletion tests passed.'
