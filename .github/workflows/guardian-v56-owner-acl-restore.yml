@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
+      - scripts/GuardianV57-CanonicalCatalog.sql
   pull_request:
     paths:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
@@ -100,6 +101,35 @@ jobs:
             echo 'SYNTHETIC_CATALOG_POSTCHECK_FAILED'
             exit 1
           fi
+          # V5.7 semantic fingerprint: private text never printed to CI logs.
+          docker exec -i --user postgres "$source_name" psql -X -qAt -w -v ON_ERROR_STOP=1 \
+            -v schema=fixture -U postgres -d fixture \
+            < scripts/GuardianV57-CanonicalCatalog.sql > "$root/catalog-source"
+          docker exec -i --user postgres "$dest_name" psql -X -qAt -w -v ON_ERROR_STOP=1 \
+            -v schema=fixture -U postgres -d fixture \
+            < scripts/GuardianV57-CanonicalCatalog.sql > "$root/catalog-dest"
+          test -s "$root/catalog-source"
+          test -s "$root/catalog-dest"
+          src_hash=$(sha256sum "$root/catalog-source" | cut -d' ' -f1)
+          dst_hash=$(sha256sum "$root/catalog-dest" | cut -d' ' -f1)
+          if [ "$src_hash" != "$dst_hash" ]; then
+            echo 'V57_CATALOG_SEMANTICS_NOT_EQUAL'
+            exit 1
+          fi
+          echo 'V57_CATALOG_SOURCE_DEST_SEMANTICS_SHA256=PASS'
+          # Fault injection: a revoked real SELECT privilege MUST alter the fingerprint.
+          docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \
+            -c "REVOKE SELECT ON fixture.jobs FROM r62_fixture_reader;"
+          docker exec -i --user postgres "$dest_name" psql -X -qAt -w -v ON_ERROR_STOP=1 \
+            -v schema=fixture -U postgres -d fixture \
+            < scripts/GuardianV57-CanonicalCatalog.sql > "$root/catalog-tampered"
+          changed_hash=$(sha256sum "$root/catalog-tampered" | cut -d' ' -f1)
+          if [ "$changed_hash" = "$src_hash" ]; then
+            echo 'V57_ACL_FAULT_NOT_DETECTED'
+            exit 1
+          fi
+          echo 'V57_REVOKED_ACL_DETECTED=PASS'
+          # Both containers are synthetic and are automatically destroyed by cleanup.
           echo 'PG17_RESTORE_OWNER_PRESERVED=PASS'
           echo 'PG17_RESTORE_ACL_PRESERVED=PASS'
           echo 'PG17_RESTORE_DEFAULT_ACL_PRESERVED=PASS'
