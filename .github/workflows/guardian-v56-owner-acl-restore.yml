@@ -5,6 +5,9 @@ on:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
       - scripts/GuardianV57-CanonicalCatalog.sql
       - scripts/GuardianV57-CompareCatalog.mjs
+      - scripts/GuardianV58-EncryptedLabRestore.mjs
+      - scripts/test-GuardianV58-MakeSyntheticArchive.mjs
+      - scripts/GuardianV53-AuthenticateR62DB.mjs
   pull_request:
     paths:
       - .github/workflows/guardian-v56-owner-acl-restore.yml
@@ -23,7 +26,7 @@ jobs:
           docker pull postgres:17 >/dev/null
           root=$(mktemp -d)
           source_name="r62_v56_source_$RANDOM"
-          dest_name="r62_v56_dest_$RANDOM"
+          dest_name="r62v58_dest_${RANDOM}${RANDOM}"
           net="r62_v56_internal_$RANDOM"
           docker network create --internal "$net" >/dev/null
           cleanup() {
@@ -34,7 +37,7 @@ jobs:
           trap cleanup EXIT
           docker run -d --pull never --name "$source_name" --network "$net" --label r62.v56=synthetic \
             -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
-          docker run -d --pull never --name "$dest_name" --network "$net" --label r62.v56=synthetic \
+          docker run -d --pull never --name "$dest_name" --network "$net" --label r62.v56=synthetic --label r62.guardian.synthetic.v58=true \
             -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
           for c in "$source_name" "$dest_name"; do
             stable=0
@@ -82,8 +85,20 @@ jobs:
           echo 'MISSING_ROLE_FAILED_CLOSED_WITHOUT_PARTIAL_TABLES=PASS'
           # Explicitly approved role definitions for this synthetic lab only.
           docker exec -i --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/roles.sql"
-          docker exec -i --user postgres "$dest_name" pg_restore --exit-on-error --single-transaction \
-            -U postgres -d fixture <"$root/schema.dump"
+          # V5.8: exercise real R62DB02->AES-GCM->PGDMP->PG17 without ever writing a restored plaintext dump.
+          export R62_V58_SYNTHETIC_PASSWORD='V58_CI_SYNTHETIC_PASSWORD_NEVER_USER_SECRET'
+          node --check scripts/GuardianV58-EncryptedLabRestore.mjs
+          node scripts/test-GuardianV58-MakeSyntheticArchive.mjs "$root/schema.dump" "$root/fixture.r62db" >"$root/fixture-manifest"
+          checksum=$(sha256sum "$root/fixture.r62db" | cut -d' ' -f1)
+          # An incorrect expected ciphertext checksum must BLOCK before restoration.
+          if node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/fixture.r62db" --sha256 "$(printf '0%.0s' {1..64})" --target "$dest_name" --mode synthetic-ci >"$root/bad-sha"; then
+            echo 'V58_BAD_SHA_NOT_BLOCKED'; exit 1
+          fi
+          grep -q 'STATUS=BLOCKED_ARCHIVE_SHA_MISMATCH' "$root/bad-sha"
+          node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/fixture.r62db" --sha256 "$checksum" --target "$dest_name" --mode synthetic-ci >"$root/actual-restore"
+          grep -q 'AES_GCM_AUTHENTICATED_BEFORE_SQL=YES' "$root/actual-restore"
+          grep -q 'PG_DUMP_RESTORED_TRANSACTONALLY=YES' "$root/actual-restore"
+          echo 'V58_SYNTHETIC_ENCRYPTED_POSTGRES_RESTORE=PASS'
           cat >"$root/check.sql" <<'SQL'
           BEGIN READ ONLY;
           SELECT
