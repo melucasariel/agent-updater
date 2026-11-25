@@ -30,6 +30,2649 @@ jobs:
             if (@($errors).Count) { throw "Syntax failed: $($file.Name)" }
             Write-Output "PARSE_OK=$($file.Name)"
           }
+      - name: Canary local packaging and DPAPI signing smoke test
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\tests\Test-GuardianCanarySigning-v3.4.1.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^CANARY_OFFLINE_TEST=PASS
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\major\OneShot-TestAndUpgrade-v3.4.ps1 -OnlyTests 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^\[APROVADO\] Seis suites Windows isoladas
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianMajor-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=7/7
+      - name: Major v3.4 real Windows sandbox migration
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\tests\Test-GuardianMajorIntegration-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^MAJOR_SANDBOX_TESTS_PASSED=7/7
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianUpdatePolicy-v3.1.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=11
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=10
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianHealthHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=6/6
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^LAB_TESTS_DESIGNED=4
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Integrated suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major migration integration failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianUpdatePolicy-v3.1.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=11
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=10
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianHealthHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=6/6
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^LAB_TESTS_DESIGNED=4
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Integrated suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'One-shot suite did not pass'}
+      - name: Major v3.4 updater disabled-mode smoke test
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianMajor-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=7/7
+      - name: Major v3.4 real Windows sandbox migration
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\tests\Test-GuardianMajorIntegration-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^MAJOR_SANDBOX_TESTS_PASSED=7/7
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianUpdatePolicy-v3.1.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=11
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=10
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianHealthHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=6/6
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^LAB_TESTS_DESIGNED=4
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Integrated suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major migration integration failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianUpdatePolicy-v3.1.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=11
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_DESIGNED=10
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianHealthHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^TESTS_PASSED=6/6
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result = @(& .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^LAB_TESTS_DESIGNED=4
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Integrated suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Health suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Supervisor suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Manifest suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+)) {throw 'Major smoke test failed'}
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
+
+  major-integration-diagnostics:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run major integration fixture and expose safe diagnostic
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $result=@(& .\tests\Test-GuardianMajorIntegration-v3.4.ps1 2>&1)
+          $result | Write-Output
+          if (-not ($result -match '^MAJOR_SANDBOX_TESTS_PASSED=7/7$')) {throw 'Major integration fixture failed'}
+)) {throw 'Canary signing smoke failed'}
       - name: Full one-shot Windows validation (no live install)
         shell: powershell
         run: |
