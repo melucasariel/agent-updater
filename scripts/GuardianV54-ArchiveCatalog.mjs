@@ -23,16 +23,48 @@ function cliOptions(argv){
  if(!path.isAbsolute(argv[1])||!/^[a-f0-9]{64}$/i.test(argv[3])||!path.isAbsolute(argv[5]))fail('USAGE');
  return {archive:argv[1],sha:argv[3].toLowerCase(),report:argv[5]};
 }
+const RESTORED_CONTAINERS=['44fc8a2a3995','529fc3927b48','4645575c1617','9576b226ca0a'];
+let verifiedImage=null;
+function dockerProbe(args,timeout=12000){
+ const r=spawnSync('docker',args,{encoding:'utf8',timeout,windowsHide:true,maxBuffer:1024*1024});
+ return r.status===0?String(r.stdout).trim():null;
+}
 function localDocker(){
+ if(verifiedImage)return verifiedImage;
  if(process.env.DOCKER_HOST||process.env.DOCKER_CONTEXT)fail('REMOTE_DOCKER_CONTEXT');
- const r=spawnSync('docker',['context','show'],{encoding:'utf8',timeout:12000,windowsHide:true,maxBuffer:1024*1024});
- if(r.status!==0||!['default','desktop-linux'].includes(r.stdout.trim()))fail('DOCKER_CONTEXT_BLOCKED');
- const q=spawnSync('docker',['context','inspect',r.stdout.trim()],{encoding:'utf8',timeout:12000,windowsHide:true,maxBuffer:1024*1024});
- let ctx;try{ctx=JSON.parse(q.stdout);}catch{fail('DOCKER_CONTEXT_BLOCKED');}
+ const context=dockerProbe(['context','show']);
+ if(!['default','desktop-linux'].includes(context))fail('DOCKER_CONTEXT_BLOCKED');
+ const raw=dockerProbe(['context','inspect',context]);
+ let ctx;try{ctx=JSON.parse(raw);}catch{fail('DOCKER_CONTEXT_BLOCKED');}
  const host=ctx?.[0]?.Endpoints?.docker?.Host;
- if(q.status!==0||typeof host!=='string'||!(host.startsWith('npipe://')||host.startsWith('unix://')))fail('DOCKER_CONTEXT_BLOCKED');
- const img=spawnSync('docker',['image','inspect','postgres:17'],{encoding:'utf8',timeout:12000,windowsHide:true,maxBuffer:1024*1024});
- if(img.status!==0)fail('PG17_IMAGE_NOT_PRELOADED');
+ if(typeof host!=='string'||!(host.startsWith('npipe://')||host.startsWith('unix://')))fail('DOCKER_CONTEXT_BLOCKED');
+ const candidates=['postgres:17','postgres:17-alpine','postgres:17-bookworm'];
+ for(const id of RESTORED_CONTAINERS){
+  const info=dockerProbe(['inspect','--type','container',id]);
+  if(!info)continue;
+  let item;try{item=JSON.parse(info)?.[0];}catch{continue;}
+  // Only pre-existing, identified isolated Postgres restoration containers.
+  if(item?.State?.Running===true&&item?.Id?.startsWith(id)&&typeof item.Image==='string'&&
+     /^sha256:[a-f0-9]{64}$/.test(item.Image)&&
+     String(item.Config?.Image).toLowerCase().includes('postgres')&&
+     Array.isArray(item.Mounts)&&item.Mounts.length===1&&item.Mounts[0].Type==='volume'&&
+     Object.values(item.NetworkSettings?.Ports||{}).every(x=>!Array.isArray(x)||x.length===0)){
+    candidates.push(item.Image);
+  }
+ }
+ for(const candidate of [...new Set(candidates)]){
+  if(!dockerProbe(['image','inspect',candidate]))continue;
+  // No port, network, mount, env injection or database process is ever started.
+  const version=dockerProbe(['run','--rm','--pull','never','--network','none','--read-only',
+    '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','32',
+    '--memory','128m','--cpus','1','--user','999:999',
+    '--entrypoint','pg_restore',candidate,'--version'],25000);
+  if(version&&/pg_restore \(PostgreSQL\) 17(?:\.|\s|$)/.test(version)){
+   verifiedImage=candidate;
+   return verifiedImage;
+  }
+ }
+ fail('PG17_LOCAL_IMAGE_NOT_FOUND');
 }
 function header(file){
  const st=fs.lstatSync(file);
@@ -92,7 +124,7 @@ function classifyTOC(s){
  return {items:rows.length,counts};
 }
 async function catalogFromEncrypted(file,passwd){
- localDocker();
+ const selectedImage=localDocker();
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
  let child=null,stdout='',badOutput=false,failed=false;
@@ -100,7 +132,7 @@ async function catalogFromEncrypted(file,passwd){
   const args=['run','--rm','-i','--pull','never','--network','none','--read-only',
    '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','64','--memory','256m',
    '--cpus','1','--user','999:999','--tmpfs','/tmp:rw,noexec,nosuid,size=16m',
-   '--entrypoint','pg_restore','postgres:17','--list'];
+   '--entrypoint','pg_restore',selectedImage,'--list'];
   child=spawn('docker',args,{stdio:['pipe','pipe','pipe'],windowsHide:true,env:{...process.env,DOCKER_HOST:undefined,DOCKER_CONTEXT:undefined}});
   const watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},90000);
   const done=new Promise((resolve,reject)=>{
@@ -157,6 +189,7 @@ export async function main(argv){
  const result=await examine(p.archive,p.sha,pass);
  const lines=['=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===',
   'CIPHERTEXT_SHA256_MATCH=YES','AES_GCM_TAG_AUTHENTICATED=YES',
+  'LOCAL_PG17_IMAGE_VERIFIED=YES',
   'DECRYPTED_PG_CUSTOM_HEADER=YES','PG_RESTORE_CATALOG=PASS',
   'ARCHIVE_CONTENT_SHA16='+result.auth.plainSha256.slice(0,16).toUpperCase(),
   'ARCHIVE_CATALOG_ITEMS='+result.toc.items];
@@ -172,7 +205,7 @@ export async function main(argv){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  main(process.argv.slice(2)).catch(err=>{
-  const known=new Set(['USAGE','REMOTE_DOCKER_CONTEXT','DOCKER_CONTEXT_BLOCKED','PG17_IMAGE_NOT_PRELOADED',
+  const known=new Set(['USAGE','REMOTE_DOCKER_CONTEXT','DOCKER_CONTEXT_BLOCKED','PG17_IMAGE_NOT_PRELOADED','PG17_LOCAL_IMAGE_NOT_FOUND',
    'INVALID_ARCHIVE','BAD_MAGIC','BAD_HEADER','UNSUPPORTED_HEADER','TTY_REQUIRED','CANCELLED',
    'PG_RESTORE_LIST_FAILED','TOC_UNEXPECTEDLY_SMALL','SECOND_PASS_AUTHENTICATION_FAILED']);
   const report=['=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===',
