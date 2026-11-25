@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // All files are synthetic. No network, no real backups.
 import {prepare} from './GuardianV5-LabStage.mjs';
+import {verifyStage} from './GuardianV5-VerifyStage.mjs';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,readdirSync,statSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -42,6 +43,7 @@ try{
  assert.equal(manifest.format,'r62-guardian-v5-lab-stage-1');
  assert.equal(manifest.secretsVaultIncluded,false);
  assert.equal(manifest.entries.length,6);
+ assert.equal(verifyStage(target).files,6);
  assert.equal(existsSync(path.join(target,'secrets-vault')),false);
  assert.equal(readFileSync(path.join(target,'database','snapshot.r62db'),'utf8'),'ENCRYPTED_SYNTHETIC_DATA_NO_SECRETS');
  for(const entry of manifest.entries){
@@ -50,6 +52,15 @@ try{
  }
  blocked(()=>prepare({cfg,lab,mode:'stage'}),'TARGET_EXISTS_NO_OVERWRITE');
  assert.equal(statSync(path.join(target,'manifest.json')).isFile(),true);
+ // Verify stage without needing original sources, and detect copied artifact tampering.
+ writeFileSync(path.join(target,'web','fixture'),'CORRUPTED');
+ blocked(()=>verifyStage(target),'HASH_MISMATCH');
+ writeFileSync(path.join(target,'web','fixture'),'synthetic-web');
+ assert.equal(verifyStage(target).files,6);
+ writeFileSync(path.join(target,'unexpected'),'EXTRA');
+ blocked(()=>verifyStage(target),'EXTRA_OR_MISSING_FILE');
+ rmSync(path.join(target,'unexpected'));
+ assert.equal(verifyStage(target).files,6);
  writeFileSync(components.database.path,'TAMPER');
  blocked(()=>prepare({cfg,lab,mode:'plan'}),'SEVEN_COMPONENTS_NOT_VERIFIED');
  assert.equal(readdirSync(lab).filter(x=>x.startsWith('.r62-staging-')).length,0);
