@@ -59,4 +59,5 @@ jobs:
           if ($LASTEXITCODE -ne 0){throw 'Node syntax'}
           $output=@(node scripts/GuardianV4-Coverage.mjs --mode invalid --config missing)
           if($LASTEXITCODE -ne 2 -or ($output -join ' ') -notmatch 'STATUS=BLOCKED'){throw 'Fail closed'}
+          $global:LASTEXITCODE=0
           Write-Output 'WINDOWS_V4_FAIL_CLOSED_PASS'
