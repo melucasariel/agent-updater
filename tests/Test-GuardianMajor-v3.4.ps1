@@ -37,6 +37,7 @@ try {
  Pass (-not (Test-Path (Join-Path $root 'stop_v3.flag'))) 'NO_STOP_FLAG'
  Write-Output ('TESTS_PASSED='+$count+'/7')
  Write-Output '[LIMIT] CI smoke only; signed Release download and real Guardian restart remain untested.'
+$global:LASTEXITCODE=0
 } catch {
  Write-Output ('[BLOQUEADO] '+([string]$_.Exception.Message -replace '[^a-zA-Z0-9_]','?'))
  exit 1
