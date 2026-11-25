@@ -9,6 +9,9 @@ $cfgFile=Join-Path $root 'update_source.json'
 $agent=Join-Path $root 'GuardianAgent_v3.ps1'
 $versionFile=Join-Path $root 'installed_version.txt'
 $stop=Join-Path $root 'stop_v3.flag'
+$updateMutex=New-Object Threading.Mutex($false,'Local\ROTA62_Guardian_Update_v34')
+try{$lockHeld=$updateMutex.WaitOne(0)}catch [Threading.AbandonedMutexException]{$lockHeld=$true}
+if(-not $lockHeld){Write-Output '[BLOQUEADO] UPDATE_ALREADY_RUNNING';exit 2}
 function Reject([string]$message){throw $message}
 function ParseVersion([string]$s){
  if($s -cnotmatch '^3\.(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$'){Reject 'VERSION_INVALID'}
@@ -170,7 +173,9 @@ try{
    if($child -and !$child.HasExited){$child.Kill();$child.WaitForExit(4000)|Out-Null}
    [IO.File]::Copy($backup,$agent,$true)
    Remove-Item -LiteralPath $stop -Force -ErrorAction SilentlyContinue
-   $null=StartAgent '' ''
+   $restored=StartAgent '' ''
+   Start-Sleep -Milliseconds 1200
+   if($restored.HasExited){Reject 'RESTORED_AGENT_EXITED'}
    Write-Output '[RECUPERADO] PREVIOUS_AGENT_RESTORED'
   }catch{Write-Output '[CRITICO] MANUAL_ROLLBACK_REQUIRED'}
  }elseif(Test-Path -LiteralPath $stop){
@@ -182,4 +187,6 @@ try{
  if($receipt){Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue}
  if($work){Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue}
  if($stage){Remove-Item -LiteralPath $stage -Force -ErrorAction SilentlyContinue}
+ if($lockHeld){try{$updateMutex.ReleaseMutex()}catch{}}
+ $updateMutex.Dispose()
 }
