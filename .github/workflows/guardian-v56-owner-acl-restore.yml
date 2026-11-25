@@ -55,6 +55,7 @@ jobs:
           cat >"$root/roles.sql" <<'SQL'
           CREATE ROLE r62_fixture_owner NOLOGIN;
           CREATE ROLE r62_fixture_reader NOLOGIN;
+          CREATE ROLE r62_fixture_reader2 NOLOGIN;
           SQL
           cat >"$root/structure.sql" <<'SQL'
           CREATE SCHEMA fixture AUTHORIZATION r62_fixture_owner;
@@ -62,9 +63,9 @@ jobs:
           ALTER TABLE fixture.jobs OWNER TO r62_fixture_owner;
           INSERT INTO fixture.jobs VALUES (1,'SYNTHETIC_TEST_ONLY');
           CREATE INDEX jobs_state_idx ON fixture.jobs(state);
-          GRANT SELECT ON fixture.jobs TO r62_fixture_reader;
+          GRANT SELECT ON fixture.jobs TO r62_fixture_reader, r62_fixture_reader2;
           ALTER DEFAULT PRIVILEGES FOR ROLE r62_fixture_owner IN SCHEMA fixture
-            GRANT SELECT ON TABLES TO r62_fixture_reader;
+            GRANT SELECT ON TABLES TO r62_fixture_reader, r62_fixture_reader2;
           ALTER TABLE fixture.jobs ENABLE ROW LEVEL SECURITY;
           CREATE POLICY jobs_select ON fixture.jobs FOR SELECT USING (true);
           SQL
@@ -84,7 +85,13 @@ jobs:
           test "$status" = '0'
           echo 'MISSING_ROLE_FAILED_CLOSED_WITHOUT_PARTIAL_TABLES=PASS'
           # Explicitly approved role definitions for this synthetic lab only.
-          docker exec -i --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/roles.sql"
+          # Deliberately create grantees in a DIFFERENT order so their numeric OIDs diverge.
+          cat >"$root/dest-roles.sql" <<'SQL'
+          CREATE ROLE r62_fixture_owner NOLOGIN;
+          CREATE ROLE r62_fixture_reader2 NOLOGIN;
+          CREATE ROLE r62_fixture_reader NOLOGIN;
+          SQL
+          docker exec -i --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/dest-roles.sql"
           # V5.8: exercise real R62DB02->AES-GCM->PGDMP->PG17 without ever writing a restored plaintext dump.
           export R62_V58_SYNTHETIC_PASSWORD='V58_CI_SYNTHETIC_PASSWORD_NEVER_USER_SECRET'
           node --check scripts/GuardianV58-EncryptedLabRestore.mjs
@@ -150,6 +157,7 @@ jobs:
           node scripts/GuardianV57-CompareCatalog.mjs --source "$root/catalog-source" --destination "$root/catalog-dest" > "$root/compare-ok"
           grep -q 'CATALOG_SEMANTIC_FINGERPRINT_MATCH=YES' "$root/compare-ok"
           echo 'V57_PRIVACY_SAFE_COMPARATOR_MATCH=PASS'
+          echo 'V57_ROLE_OID_ORDER_DIVERGENCE_NORMALIZED=PASS'
           echo 'V57_CATALOG_SOURCE_DEST_SEMANTICS_SHA256=PASS'
           # Fault injection: a revoked real SELECT privilege MUST alter the fingerprint.
           docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \
