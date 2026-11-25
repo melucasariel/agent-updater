@@ -4,6 +4,7 @@
 // Local only. Config describes EXISTING snapshots, not how to capture them.
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import crypto from 'node:crypto';
 const names=['database','web','api','storage','dns','config','secrets-vault'];
 const fileRoles=new Set(['database','dns','config','secrets-vault']);
@@ -116,7 +117,7 @@ function cli(argv){
  console.log('END_REPORT_OK');
  if(!result.complete)process.exitCode=2;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===path.resolve(new URL(import.meta.url).pathname)){
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  try{cli(process.argv.slice(2));}catch(e){
   console.log('=== ROTA62 GUARDIAN V4 ===');
   console.log('STATUS=BLOCKED_'+(['USAGE','INVALID_CONFIG','UNKNOWN_COMPONENT','INVALID_COMPONENT_PATH','DATABASE_HASH_REQUIRED','INVALID_KIND'].includes(e.message)?e.message:'REDACTED'));
