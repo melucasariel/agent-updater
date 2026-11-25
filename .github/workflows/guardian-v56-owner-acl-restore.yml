@@ -26,7 +26,7 @@ jobs:
           docker pull postgres:17 >/dev/null
           root=$(mktemp -d)
           source_name="r62_v56_source_$RANDOM"
-          dest_name="r62v58_dest_${RANDOM}${RANDOM}"
+          dest_name="r62v58_dest_$(printf '%06d' "$RANDOM")$(printf '%06d' "$RANDOM")"
           net="r62_v56_internal_$RANDOM"
           docker network create --internal "$net" >/dev/null
           cleanup() {
@@ -95,6 +95,21 @@ jobs:
             echo 'V58_BAD_SHA_NOT_BLOCKED'; exit 1
           fi
           grep -q 'STATUS=BLOCKED_ARCHIVE_SHA_MISMATCH' "$root/bad-sha"
+          # Wrong password must not create partial schema or execute any restored objects.
+          if R62_V58_SYNTHETIC_PASSWORD='V58_INCORRECT_SYNTHETIC_PASSWORD' node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/fixture.r62db" --sha256 "$checksum" --target "$dest_name" --mode synthetic-ci >"$root/bad-password"; then
+            echo 'V58_WRONG_PASSWORD_NOT_BLOCKED'; exit 1
+          fi
+          count=$(docker exec --user postgres "$dest_name" psql -X -qAt -w -U postgres -d fixture -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='r'")
+          test "$count" = '0'
+          # Recompute outer SHA after changing GCM tag: internal authentication must still fail.
+          cp "$root/fixture.r62db" "$root/bad-tag.r62db"
+          node -e 'const f=require("fs");const b=f.readFileSync(process.argv[1]);b[b.length-1]^=1;f.writeFileSync(process.argv[1],b)' "$root/bad-tag.r62db"
+          bad_hash=$(sha256sum "$root/bad-tag.r62db" | cut -d' ' -f1)
+          if node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/bad-tag.r62db" --sha256 "$bad_hash" --target "$dest_name" --mode synthetic-ci >"$root/bad-tag-report"; then
+            echo 'V58_INVALID_GCM_TAG_NOT_BLOCKED'; exit 1
+          fi
+          test "$(docker exec --user postgres "$dest_name" psql -X -qAt -w -U postgres -d fixture -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='r'")" = '0'
+          echo 'V58_WRONG_PASSWORD_AND_BAD_TAG_FAIL_BEFORE_RESTORE=PASS'
           node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/fixture.r62db" --sha256 "$checksum" --target "$dest_name" --mode synthetic-ci >"$root/actual-restore"
           grep -q 'AES_GCM_AUTHENTICATED_BEFORE_SQL=YES' "$root/actual-restore"
           grep -q 'PG_DUMP_RESTORED_TRANSACTONALLY=YES' "$root/actual-restore"
