@@ -1,0 +1,54 @@
+name: Guardian Windows validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/guardian-windows-tests.yml'
+      - 'candidates/**'
+      - 'tests/**'
+      - 'major/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-tests:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell syntax check across candidate/test scripts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-ChildItem candidates,tests -Filter *.ps1 -Recurse -File)
+          if (Test-Path major) { $files += @(Get-ChildItem major -Filter *.ps1 -Recurse -File) }
+          foreach ($file in $files) {
+            $tokens=$null; $errors=$null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$errors)
+            if (@($errors).Count) { throw "Syntax failed: $($file.Name)" }
+            Write-Output "PARSE_OK=$($file.Name)"
+          }
+      - name: Signed manifest and downgrade tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianUpdatePolicy-v3.1.ps1
+          if($LASTEXITCODE -ne 0){throw 'Manifest test suite failed'}
+      - name: Supervisor sandbox tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorSandbox-v3.2.ps1
+          if($LASTEXITCODE -ne 0){throw 'Supervisor test suite failed'}
+      - name: Real-process health fixture tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianHealthHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Health test suite failed'}
+      - name: Integrated handshake rollback tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianSupervisorHandshake-v3.3.ps1
+          if($LASTEXITCODE -ne 0){throw 'Integrated test suite failed'}
