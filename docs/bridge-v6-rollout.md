@@ -22,3 +22,19 @@ It uses the locally pinned RSA public key, offline signature verification, persi
 - Replays are rejected; logs are local and intentionally omit request contents.
 - A public GitHub commit by itself cannot authenticate requests or make ChatGPT view local results.
 - The static current.json endpoint is a provisional test transport and not a multi-request queue.
+
+## Consolidated guarded installer (candidate)
+
+Run `scripts/Install-BridgeV6.ps1` only from a separately authenticated and manually reviewed local checkout. Supply an RSA public key that was already pinned through a trusted channel. Without `-Install`, it only checks script availability, PowerShell syntax and key material, and does not stage anything. `-Install` copies reviewed scripts to a chosen user directory; it deliberately **does not** create a Windows scheduled task, Windows service, background watcher, autostart or GitHub credential.
+
+`scripts/BridgeV6-Operator.ps1 -Mode STATUS` reports only local staging state. `-Mode SELFTEST_ONCE` requires the installed receiver and a signed request at the configured endpoint; it is **not** a proof of end-to-end ChatGPT integration.
+
+## Operational blockers — do not describe as ready
+
+- Remote request publisher with protected signing key and authenticated operator is absent; public GitHub content alone is not authority.
+- No private return transport to this ChatGPT session is available.
+- The endpoint `bridge-v6/requests/current.json` remains intentionally unprovisioned.
+- No configured Windows installation or local public-key pinning has been verified.
+- No unattended task has been registered; the candidate receiver does not run in background by default.
+- GitHub Actions execution results must be confirmed before any rollout.
+- Keep existing local V5/V6 monitor active or inactive according to its current safe state until verified migration; do not blanket-kill unknown PowerShell instances.
