@@ -22,6 +22,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: PowerShell parse validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $files=@('scripts/Receive-BridgeV6.ps1','scripts/New-BridgeV6SignedRequest.ps1','scripts/Test-BridgeV6ReplayGuard.ps1','scripts/Verify-BridgeV6Request.ps1')
+          foreach($file in $files){
+            $tokens=$null
+            $errors=$null
+            [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file),[ref]$tokens,[ref]$errors)
+            if($errors.Count -ne 0){throw ('PowerShell parse error in '+$file)}
+          }
       - name: Signed request accepted once, replay blocked
         shell: powershell
         run: |
