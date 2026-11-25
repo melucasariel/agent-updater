@@ -36,7 +36,7 @@ jobs:
           [IO.Directory]::CreateDirectory($root)|Out-Null
           $audit=Join-Path $root 'R62-Clean6-Semantics-v141.mjs'
           [IO.File]::WriteAllText($audit,'const a = 1;')
-          $report=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath $audit -NoClipboard)
+          $report=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath $audit -NoClipboard -SkipDocker)
           Write-Output ($report -join "`n")
           if(($report -join "`n") -notmatch '(?m)^AUDIT_CANDIDATES_FOUND=1{throw 'Expected audit missing'}
           if(($report -join "`n") -notmatch '(?m)^AUDIT_1_NODE_SYNTAX_OK=True{throw 'Node syntax check failed'}
@@ -44,7 +44,7 @@ jobs:
           if(($report -join "`n") -notmatch '(?m)^SEMANTIC_AUDIT_NOT_EXECUTED=YES{throw 'Audit safeguard missing'}
           if(($report -join "`n") -notmatch '(?m)^END_REPORT_OK{throw 'Report footer missing'}
           if(($report -join "`n") -match [regex]::Escape($root)){throw 'Local path leaked'}
-          $missing=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath (Join-Path $root 'missing.mjs') -NoClipboard)
+          $missing=@(& ./scripts/Test-Clean6ReadinessV2.ps1 -AuditScriptPath (Join-Path $root 'missing.mjs') -NoClipboard -SkipDocker)
           if(($missing -join "`n") -notmatch '(?m)^AUDIT_CANDIDATES_FOUND=0{throw 'Missing-case incorrect'}
 ){throw 'Expected audit missing'}
           if($report -notcontains 'AUDIT_1_NODE_SYNTAX_OK=True'){throw 'Node syntax check failed'}
