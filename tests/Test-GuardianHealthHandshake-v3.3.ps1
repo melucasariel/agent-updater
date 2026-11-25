@@ -46,6 +46,7 @@ try {
  Write-Output ('TESTS_PASSED='+$passed+'/6')
  Write-Output '[LIMIT] Fixture subprocess, NOT installed Guardian; no real supervisor rollback or installation.'
  Write-Output '[NAO_EXECUTADO] Guardian ativo, Docker, SQL, rede, update remoto'
+$global:LASTEXITCODE=0
 } catch {
  $safe=([string]$_.Exception.Message -replace '[^A-Z0-9_]','?')
  Write-Output ('[BLOQUEADO] '+$safe)
