@@ -19,7 +19,7 @@ try {
  if($xml -notmatch '^\s*<RSAKeyValue>' -or $xml -match '<D>|<P>|<Q>|<DP>|<DQ>|<InverseQ>'){Fail 'PUBLIC_KEY_INVALID'}
  $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider
  try {$rsa.PersistKeyInCsp=$false; $rsa.FromXmlString($xml); if($rsa.KeySize -lt 2048){Fail 'PUBLIC_KEY_TOO_WEAK'}} finally {$rsa.Dispose()}
- $required=@('Receive-BridgeV6.ps1','Verify-BridgeV6Request.ps1','Test-BridgeV6ReplayGuard.ps1','Test-Clean6ReadinessV2.ps1','BridgeV6-Operator.ps1')
+ $required=@('Receive-BridgeV6.ps1','Verify-BridgeV6Request.ps1','Test-BridgeV6ReplayGuard.ps1','Test-Clean6ReadinessV2.ps1','Locate-Clean6ErrorMarkers.ps1','BridgeV6-Operator.ps1')
  foreach($file in $required){
    $path=Join-Path $source $file
    if(-not (Test-Path -LiteralPath $path -PathType Leaf)){Fail 'REQUIRED_SOURCE_MISSING'}
