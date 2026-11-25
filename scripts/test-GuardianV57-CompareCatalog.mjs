@@ -28,7 +28,7 @@ try{
  assert.equal(changed.categoryCounts.every(x=>x.countMatch),true);
  // A semantic ACL change is detectable even with exactly matching category counts.
  assert.notEqual(changed.sourceFingerprint16,changed.destinationFingerprint16);
- fs.writeFileSync(dst,'TABLE|a\nSCHEMA|z\n');
+ fs.writeFileSync(dst,'TABLE|a\nSCHEMA|z\nCOLUMN|x\n');
  assert.throws(()=>compareCatalogs(src,dst),e=>e.message==='CATALOG_NOT_SORTED');
  write(dst,[...base,'SECRET|somevalue']);
  assert.throws(()=>compareCatalogs(src,dst),e=>e.message==='UNKNOWN_CATALOG_CATEGORY');
