@@ -25,3 +25,8 @@ Em Windows, três arquivos `R62DB02` são cópias idênticas de um snapshot, SHA
 5. A recuperação Web/API/Storage e medição end-to-end RTO 4–6h continuam pendentes até ensaio completo.
 
 **Operação V5.4 não descriptografa em disco nem altera os quatro containers do usuário.**
+## V5.4.1 — imagem PostgreSQL 17 local por digest
+
+O operador teve `BLOCKED_PG17_IMAGE_NOT_PRELOADED`, embora o ambiente já possuísse containers PG17 isolados. A versão anterior aceitava apenas o nome/tag exato `postgres:17`, causando falso bloqueio antes de solicitar senha. A partir de V5.4.1 o Guardian procura `postgres:17`, `postgres:17-alpine`, `postgres:17-bookworm` e IDs SHA256 das imagens dos quatro containers CLEAN6 conhecidos, após verificar que cada container está rodando, não expõe portas e usa volume Docker. Para cada candidato inicia **somente `pg_restore --version`** em um container efêmero `--network none`, sem volumes e sem privilégios; aceita apenas PostgreSQL major 17. Depois usa exatamente a mesma imagem verificada para `pg_restore --list` sem SQL. Não baixa imagens nem modifica containers existentes. A ausência de imagem compatível continua bloqueando sem pedir senha.
+
+O novo teste Linux elimina a tag `postgres:17` em um runner sintético e valida que o comando ainda encontra uma imagem alternativa e extrai o catálogo. Nenhum arquivo real do TaxiRadar é carregado em CI. A verificação do operador com o ciphertext verdadeiro permanece pendente.
