@@ -7,6 +7,8 @@ on:
       - 'candidates/**'
       - 'tests/**'
       - 'major/**'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,6 +30,12 @@ jobs:
             if (@($errors).Count) { throw "Syntax failed: $($file.Name)" }
             Write-Output "PARSE_OK=$($file.Name)"
           }
+      - name: Major v3.4 updater disabled-mode smoke test
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          & .\tests\Test-GuardianMajor-v3.4.ps1
+          if($LASTEXITCODE -ne 0){throw 'Major smoke test failed'}
       - name: Signed manifest and downgrade tests
         shell: powershell
         run: |
