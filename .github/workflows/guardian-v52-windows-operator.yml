@@ -33,6 +33,7 @@ jobs:
           $hash=(Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash
           $out=@(& ./scripts/Invoke-GuardianV52.ps1 -ExpectedSha256 $hash -SearchRoots @($tmp) -NoClipboard)
           $full=$out -join "`n"
+          Write-Output $full
           if($full -notmatch 'MATCHING_CIPHERTEXT_COPIES=1' -or $full -notmatch 'AUDIT_EXIT=SUCCESS' -or $full -notmatch 'CRYPTOGRAPHIC_AUTHENTICATION_PERFORMED=NO'){throw 'One-enter expected outcome failure'}
           $bad=@(& ./scripts/Invoke-GuardianV52.ps1 -ExpectedSha256 ('0'*64) -SearchRoots @($tmp) -NoClipboard)
           if(($bad -join ' ') -notmatch 'STATUS=BLOCKED_REDACTED'){throw 'Incorrect expected hash must block'}
