@@ -79,6 +79,13 @@ jobs:
             $repeat=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
             if(($repeat -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
             $obj=Get-Content -LiteralPath $request -Raw | ConvertFrom-Json
+            # Same request ID with a fresh nonce and valid fresh signature is still a replay.
+            $obj.nonce='independentlynewnonce0123456789'
+            $payload=@('ROTA62-BRIDGE-V6',$obj.protocol_version,$obj.request_id,$obj.command,$obj.issued_at,$obj.expires_at,$obj.nonce) -join "`n"
+            $obj.signature=[Convert]::ToBase64String($rsa.SignData([Text.Encoding]::UTF8.GetBytes($payload),'SHA256'))
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
+            $sameId=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if(($sameId -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Reused request ID with new nonce accepted'}
             $obj.command='SEMANTICS'
             $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
             $unsafe=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
