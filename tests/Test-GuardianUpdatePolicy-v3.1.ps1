@@ -8,7 +8,8 @@ $count=0
 function Good([string]$label,[scriptblock]$test) {& $test; $script:count++; Write-Output ('PASS='+$label)}
 function Block([string]$label,[scriptblock]$test) {
  $blocked=$false
- try {& $test | Out-Null} catch {$blocked=$true}
+ try {& $test | Out-Null$global:LASTEXITCODE=0
+} catch {$blocked=$true}
  if(-not $blocked){throw ('EXPECTED_BLOCK_MISSING:'+ $label)}
  $script:count++; Write-Output ('PASS='+$label)
 }
