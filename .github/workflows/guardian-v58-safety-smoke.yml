@@ -1,0 +1,38 @@
+name: Guardian V5.8 encrypted restore safety smoke
+on:
+  push:
+    paths:
+      - scripts/GuardianV58-EncryptedLabRestore.mjs
+      - scripts/test-GuardianV58-MakeSyntheticArchive.mjs
+      - .github/workflows/guardian-v58-safety-smoke.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV58-EncryptedLabRestore.mjs
+      - scripts/test-GuardianV58-MakeSyntheticArchive.mjs
+      - .github/workflows/guardian-v58-safety-smoke.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax-fail-closed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce the synthetic-only guard without Docker or credentials
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV58-EncryptedLabRestore.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failed'}
+          node --check scripts/test-GuardianV58-MakeSyntheticArchive.mjs
+          if($LASTEXITCODE -ne 0){throw 'Fixture syntax failed'}
+          $bad=@(node scripts/GuardianV58-EncryptedLabRestore.mjs --real-backup /secret.r62db)
+          if($LASTEXITCODE -ne 2 -or ($bad -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Real-backup mode must be prohibited'}
+          $bad2=@(node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive /no/backup --sha256 $('a'*64) --target production --mode synthetic-ci)
+          if($LASTEXITCODE -ne 2 -or ($bad2 -join ' ') -notmatch 'STATUS=BLOCKED_SYNTHETIC_CREDENTIAL_REQUIRED'){throw 'Synthetic-only credential gate not enforced'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V58_REAL_BACKUP_MODE_DISABLED_BY_DEFAULT=PASS'
+          Write-Output 'V58_SYNTHETIC_CREDENTIAL_REQUIRED=PASS'
