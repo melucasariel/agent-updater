@@ -6,6 +6,7 @@ on:
       - 'scripts/Test-BridgeV6ReplayGuard.ps1'
       - 'scripts/Verify-BridgeV6Request.ps1'
       - '.github/workflows/bridge-v6-roundtrip.yml'
+  workflow_dispatch:
   pull_request:
     paths:
       - 'scripts/New-BridgeV6SignedRequest.ps1'
@@ -35,6 +36,15 @@ jobs:
             [IO.Directory]::CreateDirectory($replay) | Out-Null
             $result=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command SELFTEST -PrivateKeyXmlPath $private -OutputPath $request)
             if($LASTEXITCODE -notin @(0,$null) -or $result -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'signing failed'}
+            # A different public key must never authenticate the request.
+            $wrongRsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
+            $wrongRsa.PersistKeyInCsp=$false
+            try {
+              $wrongPublic=Join-Path $env:RUNNER_TEMP 'wrong-public.xml'
+              [IO.File]::WriteAllText($wrongPublic,$wrongRsa.ToXmlString($false))
+              $bad=@(& ./scripts/Verify-BridgeV6Request.ps1 -RequestPath $request -PinnedPublicKeyPath $wrongPublic)
+              if($LASTEXITCODE -ne 2 -or $bad -contains '[OK] REQUEST_SIGNATURE_VERIFIED'){throw 'wrong key accepted'}
+            } finally {$wrongRsa.Dispose()}
             $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
             if($LASTEXITCODE -ne 3 -or $result -notcontains '[OK] SIGNATURE_VERIFIED_AND_REPLAY_RECORDED'){throw 'first request failed'}
             $result=@(& ./scripts/Test-BridgeV6ReplayGuard.ps1 -RequestPath $request -PinnedPublicKeyPath $public -ReplayDirectory $replay)
