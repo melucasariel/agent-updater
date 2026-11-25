@@ -13,8 +13,8 @@ $public=Join-Path $root 'signing-public.xml'
 $private=Join-Path $root 'signing-private.dpapi'
 $beforeAgent='84F9440890F1DBB550F0C57833ECD485E685839B8323B995147759A4090F9CE8'
 $beforeUpdater='9BE00D02A49457AC3A05B732F6746174241B5C545B6131368DF436604A914E0E'
-$newUpdater='E8D00558ACEBC6C8AB16E5A4DEA19EB0FDBAE5FCFFA589E6CDA34AD4C4DE6BE7'
-$url='https://raw.githubusercontent.com/melucasariel/agent-updater/a8f76aac8e6ace4dca8a508d764c395db6334637/major/GuardianUpdater-v3.4.ps1'
+$newUpdater='7DAFA8779E0ABD3139934579033D27FD7BB71691C3A3178E8C224687A9FF20E2'
+$url='https://raw.githubusercontent.com/melucasariel/agent-updater/90850cd6418df42fdb519e25c4c48dc74816e72f/major/GuardianUpdater-v3.4.ps1'
 function CheckHash([string]$p,[string]$h){if(!(Test-Path -LiteralPath $p) -or (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash -cne $h){throw 'AUDIT_HASH_MISMATCH'}}
 function AgentFree{
  $mutex=New-Object Threading.Mutex($false,'Local\ROTA62_Guardian_V3_Instance')
@@ -108,18 +108,22 @@ try{
  Write-Output '[APROVADO] GUARDIAN_MAJOR_3_4_COM_HEALTH'
  Write-Output '[OK] FEED_ASSINADO_CONFIGURADO'
  Write-Output '[LIMITE] Releases assinadas ainda precisam de publicacao.'
+ try{Set-Clipboard -Value 'GUARDIAN_MAJOR=3.4.0; STATUS=APROVADO; HEALTH=OK; FEED=CONFIGURADO' -ErrorAction Stop}catch{}
  $modifiedAgent=$false
 } catch{
  $msg=[string]$_.Exception.Message
  if($msg -notmatch '^[A-Z0-9_]+$'){$msg='ERRO_NAO_CLASSIFICADO'}
  Write-Output ('[BLOQUEADO] '+$msg)
+ try{Set-Clipboard -Value ('GUARDIAN_MAJOR=BLOQUEADO; CODIGO='+$msg) -ErrorAction Stop}catch{}
  if($modifiedAgent -and $savedAgent -and (Test-Path -LiteralPath $savedAgent)){
   try{
    if($child -and !$child.HasExited){$child.Kill();$child.WaitForExit(4000)|Out-Null}
    Copy-Item -LiteralPath $savedAgent -Destination $agent -Force
    if($modifiedUpdater -and $savedUpdater){Copy-Item -LiteralPath $savedUpdater -Destination $updater -Force}
    Remove-Item -LiteralPath $stop -Force -ErrorAction SilentlyContinue
-   $null=StartGuardian '' ''
+   $restored=StartGuardian '' ''
+   Start-Sleep -Milliseconds 1200
+   if($restored.HasExited){throw 'RESTORED_AGENT_FAILED_TO_START'}
    Write-Output '[RECUPERADO] AGENT_V3_ANTERIOR_RESTAURADO'
   }catch{Write-Output '[CRITICO] ROLLBACK_MANUAL_NECESSARIO'}
  } elseif(Test-Path -LiteralPath $stop){
