@@ -52,7 +52,7 @@ privileges AS (
   FROM types t
   CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(t.typacl,pg_catalog.acldefault('T',t.typowner)))
   UNION ALL
-  SELECT 'defaultacl:'||quote_ident(pg_catalog.pg_get_userbyid(d.defaclrole))||':'||COALESCE(quote_ident(s.nspname),'GLOBAL')||':'||d.defaclobjtype,
+  SELECT 'defaultacl:'||quote_ident(pg_catalog.pg_get_userbyid(d.defaclrole))||':'||COALESCE(quote_ident(s.nspname),'GLOBAL')||':'||d.defaclobjtype::text,
          a.grantee,a.privilege_type,a.grantor,a.is_grantable
   FROM pg_catalog.pg_default_acl d
   LEFT JOIN schemas s ON s.oid=d.defaclnamespace
