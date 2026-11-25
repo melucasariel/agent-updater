@@ -34,3 +34,14 @@ O primeiro comando não grava arquivos, o segundo grava apenas dentro do laborat
 - A pasta de staging é criada no mesmo sistema de arquivos para permitir rename atômico. O projeto evita sobrescrever/restaurar conteúdo em diretórios já existentes; não há limpeza ou remoção dos backups originais.
 
 **Próximo major release:** adaptar restaurador real a um destino descartável: reconstituir roles, schema/data e ACLs do `.r62db` via fluxo aprovado, configurar Web/API e Storage sem conectar à produção, executar smoke tests fictícios e medir RTO real. Mudanças de DNS e publicação exigem confirmação humana separada.
+## Independent offline stage verification
+
+After staging, verify the folder again **without the original backup sources**:
+
+~~~powershell
+node .\scripts\GuardianV5-VerifyStage.mjs --stage (Join-Path $lab 'restore-<16-character-db-hash>')
+~~~
+
+The verifier checks all six staged roles, every listed SHA-256, file lengths, missing files, extra files and traversal or symlink attempts. It never needs credentials, a live Supabase project or access to the original source directory. A modified `manifest.json` can be forged by anyone with write access to the lab; independent authenticated manifest signing and secure offsite copies are still necessary.
+
+**Important:** Offline staging is preparation, not a functional database restore. The `.r62db` remains encrypted and no API/website is started.
