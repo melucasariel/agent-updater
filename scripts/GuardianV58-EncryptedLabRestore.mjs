@@ -78,7 +78,7 @@ export async function restoreSynthetic({archive,expectedSha256,password,target})
  let child;
  try{
   child=spawn('docker',['exec','-i','--user','postgres',target,'pg_restore',
-   '--exit-on-error','--single-transaction','--no-publications','--no-subscriptions',
+   '--exit-on-error','--single-transaction',
    '-U','postgres','-d','fixture'],{stdio:['pipe','ignore','ignore'],windowsHide:true});
   const closed=new Promise(resolve=>{
    child.once('error',()=>resolve(-1));child.once('close',code=>resolve(code));
