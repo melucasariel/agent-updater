@@ -1,0 +1,31 @@
+name: Bridge V6 validator smoke test
+on:
+  push:
+    paths:
+      - 'scripts/Test-BridgeRequest.ps1'
+      - '.github/workflows/bridge-v6-validator.yml'
+  pull_request:
+    paths:
+      - 'scripts/Test-BridgeRequest.ps1'
+      - '.github/workflows/bridge-v6-validator.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unsafe command
+        shell: pwsh
+        run: |
+          $sample = @{ protocol_version = '6.0'; request_id = 'request-001'; command = 'ARBITRARY_POWERSHELL'; issued_at = [DateTimeOffset]::UtcNow.ToString('o'); expires_at = [DateTimeOffset]::UtcNow.AddMinutes(2).ToString('o'); nonce = 'abcdefghijklmnop0123'; signature = 'AA==' }
+          $sample | ConvertTo-Json -Compress | Set-Content -LiteralPath "$env:RUNNER_TEMP/request.json"
+          $output = & ./scripts/Test-BridgeRequest.ps1 -RequestPath "$env:RUNNER_TEMP/request.json"
+          if ($LASTEXITCODE -ne 2 -or $output -notcontains '[BLOQUEADO] DISALLOWED_COMMAND') { throw 'Guard failed' }
+      - name: Block safe command until cryptographic verification exists
+        shell: pwsh
+        run: |
+          $sample = @{ protocol_version = '6.0'; request_id = 'request-002'; command = 'SELFTEST'; issued_at = [DateTimeOffset]::UtcNow.ToString('o'); expires_at = [DateTimeOffset]::UtcNow.AddMinutes(2).ToString('o'); nonce = 'abcdefghijklmnop0123'; signature = 'AA==' }
+          $sample | ConvertTo-Json -Compress | Set-Content -LiteralPath "$env:RUNNER_TEMP/request.json"
+          $output = & ./scripts/Test-BridgeRequest.ps1 -RequestPath "$env:RUNNER_TEMP/request.json"
+          if ($LASTEXITCODE -ne 3 -or $output -notcontains '[BLOQUEADO] SIGNATURE_NOT_VERIFIED_NO_EXECUTION') { throw 'Fail-closed check failed' }
