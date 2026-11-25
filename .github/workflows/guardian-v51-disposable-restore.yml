@@ -41,6 +41,9 @@ jobs:
           node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 "$sha" --expected-tables 1 | tee "$lab/result.txt"
           grep -q 'POSTGRES17_RESTORED=YES' "$lab/result.txt"
           grep -q 'RESTORED_TABLES=1' "$lab/result.txt"
+          grep -q 'RESTORED_POLICIES=1' "$lab/result.txt"
+          grep -q 'RESTORED_RLS_TABLES=1' "$lab/result.txt"
+          grep -q 'RESTORED_INDEXES=2' "$lab/result.txt"
           grep -q 'DOCKER_RESOURCES_CLEANED=YES' "$lab/result.txt"
           if node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 0000000000000000000000000000000000000000000000000000000000000000 --expected-tables 1 >"$lab/rejected"; then exit 1; fi
           grep -q 'BLOCKED_FIXTURE_HASH_MISMATCH' "$lab/rejected"
