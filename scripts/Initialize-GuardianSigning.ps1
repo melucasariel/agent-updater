@@ -3,6 +3,7 @@
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security -ErrorAction Stop
 $root = Join-Path $env:LOCALAPPDATA 'ROTA62_Guardian_AutoSend'
 $keyPath = Join-Path $root 'signing-private.dpapi'
 $pubPath = Join-Path $root 'signing-public.xml'
@@ -14,7 +15,7 @@ try {
   $privateXml = $rsa.ToXmlString($true)
   $publicXml = $rsa.ToXmlString($false)
   $plain = [Text.Encoding]::UTF8.GetBytes($privateXml)
-  $protected = [Security.Cryptography.ProtectedData]::Protect($plain,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser)
+  $protected = [System.Security.Cryptography.ProtectedData]::Protect($plain,$null,[System.Security.Cryptography.DataProtectionScope]::CurrentUser)
   [IO.File]::WriteAllBytes($keyPath,$protected)
   [IO.File]::WriteAllText($pubPath,$publicXml,(New-Object Text.UTF8Encoding($false)))
   [Array]::Clear($plain,0,$plain.Length)
