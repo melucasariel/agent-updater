@@ -42,7 +42,7 @@ privileges AS (
   UNION ALL
   SELECT 'relation:'||quote_ident(c.nspname)||'.'||quote_ident(c.relname),grantee,privilege_type,grantor,is_grantable
   FROM relations c
-  CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(c.relacl,pg_catalog.acldefault(CASE WHEN c.relkind='S' THEN 's' ELSE 'r' END,c.relowner)))
+  CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(c.relacl,pg_catalog.acldefault((CASE WHEN c.relkind='S' THEN 's' ELSE 'r' END)::"char",c.relowner)))
   UNION ALL
   SELECT 'function:'||quote_ident(p.nspname)||'.'||p.oid::regprocedure::text,grantee,privilege_type,grantor,is_grantable
   FROM procedures p
