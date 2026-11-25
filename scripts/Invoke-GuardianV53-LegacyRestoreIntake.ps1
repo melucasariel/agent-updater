@@ -42,6 +42,49 @@ try {
   $report.Add("LEGACY_$($n)_HAS_PG_RESTORE=$($restore.ToString().ToUpperInvariant())")
   $report.Add("LEGACY_$($n)_OWNERSHIP_ACL_OMISSION_RISK=$($ownershipRisk.ToString().ToUpperInvariant())")
  }
+ # Review packaged legacy source INSIDE ZIPs. No extraction, execution, password or content output.
+ $zipCount=0
+ $packagedCount=0
+ $zipDigests=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+ try{
+  Add-Type -AssemblyName System.IO.Compression -ErrorAction Stop
+  Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+  foreach($root in ($SearchRoots|Where-Object {$_ -and (Test-Path -LiteralPath $_ -PathType Container)}|Select-Object -Unique)){
+   foreach($archive in (Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.zip' -ErrorAction SilentlyContinue|Select-Object -First 35)){
+    if($archive.Length -gt 52428800){continue}
+    $zipCount++
+    try {
+     $zip=[IO.Compression.ZipFile]::OpenRead($archive.FullName)
+     try{
+      foreach($entry in $zip.Entries){
+       if($entry.Name -notlike '*backup-postgres*.mjs' -or $entry.Length -lt 64 -or $entry.Length -gt 1048576){continue}
+       $stream=$entry.Open()
+       $buffer=New-Object IO.MemoryStream
+       try{$stream.CopyTo($buffer);$data=$buffer.ToArray()}finally{$stream.Dispose();$buffer.Dispose()}
+       if($data.Length -ne $entry.Length){continue}
+       $hasher=[Security.Cryptography.SHA256]::Create()
+       try{$digest=[BitConverter]::ToString($hasher.ComputeHash($data)).Replace('-','')}finally{$hasher.Dispose()}
+       [void]$zipDigests.Add($digest)
+       $packagedCount++
+       if($packagedCount -le 12){
+        $text=[Text.Encoding]::UTF8.GetString($data)
+        $risk=[bool]($text -match '\-\-no-owner|\-\-no-privileges|\-\-no-acl')
+        $gcm=[bool]($text -match 'aes-256-gcm|aes256gcm|AES-256-GCM')
+        $kdf=[bool]($text -match 'scrypt')
+        $report.Add("PACKAGED_$($packagedCount)_SHA256=$digest")
+        $report.Add("PACKAGED_$($packagedCount)_HAS_AES_GCM=$($gcm.ToString().ToUpperInvariant())")
+        $report.Add("PACKAGED_$($packagedCount)_HAS_SCRYPT=$($kdf.ToString().ToUpperInvariant())")
+        $report.Add("PACKAGED_$($packagedCount)_OWNERSHIP_ACL_OMISSION_RISK=$($risk.ToString().ToUpperInvariant())")
+       }
+      }
+     }finally{$zip.Dispose()}
+    }catch{$report.Add('ZIP_READ_PARTIAL=YES')}
+   }
+  }
+ }catch{$report.Add('ZIP_SCAN_UNAVAILABLE=YES')}
+ $report.Add('ZIP_ARCHIVES_EXAMINED='+$zipCount)
+ $report.Add('ZIP_EMBEDDED_SOURCE_MATCHES='+$packagedCount)
+ $report.Add('ZIP_EMBEDDED_UNIQUE_HASHES='+$zipDigests.Count)
  $report.Add('LEGACY_UNIQUE_SOURCE_HASHES='+$digests.Count)
  $report.Add('ORIGINAL_DECRYPTOR_PROVEN=NO')
  $report.Add('READY_TO_DECRYPT_REAL_BACKUP=NO')
