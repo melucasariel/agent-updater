@@ -59,7 +59,7 @@ function ProcessRequest([string]$localPath) {
 if(-not [IO.File]::Exists([IO.Path]::GetFullPath($PublicKeyPath))){ throw 'Missing locally pinned public key' }
 [IO.Directory]::CreateDirectory($script:StateRoot) | Out-Null
 [IO.Directory]::CreateDirectory((Join-Path $script:StateRoot 'seen')) | Out-Null
-$mutex=New-Object Threading.Mutex($false,'Local\ROTA62_Bridge_V6_Receiver')
+$mutex=[Threading.Mutex]::new($false,'Local\ROTA62_Bridge_V6_Receiver')
 $locked=$false
 try {
   try { $locked=$mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] { $locked=$true }
