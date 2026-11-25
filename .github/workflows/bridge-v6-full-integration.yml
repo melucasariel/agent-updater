@@ -40,12 +40,12 @@ jobs:
             $signed=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command AUDIT_PREFLIGHT -PrivateKeyXmlPath $private -OutputPath $request)
             if($signed -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'Signer failed'}
             $output=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
-            if($output -notmatch 'AUDIT_SCRIPT_' -or $output -notmatch 'RECEIVER_STOPPED'){throw 'Signed request did not run expected preflight'}
+            if(($output -join "`n") -notmatch 'AUDIT_SCRIPT_' -or ($output -join "`n") -notmatch 'RECEIVER_STOPPED'){throw 'Signed request did not run expected preflight'}
             $repeat=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
-            if($repeat -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
+            if(($repeat -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
             $obj=Get-Content -LiteralPath $request -Raw | ConvertFrom-Json
             $obj.command='SEMANTICS'
             $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
             $unsafe=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
-            if($unsafe -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
+            if(($unsafe -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
           } finally {$rsa.Dispose()}
