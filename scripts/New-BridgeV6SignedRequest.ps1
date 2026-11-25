@@ -20,7 +20,7 @@ try {
    if($rsa.KeySize -lt 2048){throw 'Key below 2048 bits'}
    $issued=[DateTimeOffset]::UtcNow
    $nonceBytes=[byte[]]::new(24)
-   [Security.Cryptography.RandomNumberGenerator]::Fill($nonceBytes)
+   $rng=[Security.Cryptography.RandomNumberGenerator]::Create(); try {$rng.GetBytes($nonceBytes)} finally {$rng.Dispose()}
    $requestId=[guid]::NewGuid().ToString('D')
    $nonce=([Convert]::ToBase64String($nonceBytes)).TrimEnd('=').Replace('+','-').Replace('/','_')
    $req=[ordered]@{
