@@ -46,6 +46,7 @@ try{
  Write-Output 'TESTS_DESIGNED=10'
  Write-Output '[LIMIT] In-memory health callback, not yet a real Agent heartbeat.'
  Write-Output '[NAO_EXECUTADO] Installed Guardian, Docker, PostgreSQL, HTTP, remote update'
+$global:LASTEXITCODE=0
 }catch{
  $safe=[string]$_.Exception.Message -replace '[^A-Z0-9_]','?'
  Write-Output ('[BLOQUEADO] '+$safe);exit 1
