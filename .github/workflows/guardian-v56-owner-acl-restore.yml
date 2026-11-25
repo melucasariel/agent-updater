@@ -1,0 +1,108 @@
+name: Guardian V5.6 exact owner ACL default ACL PG17 restore
+on:
+  push:
+    paths:
+      - .github/workflows/guardian-v56-owner-acl-restore.yml
+  pull_request:
+    paths:
+      - .github/workflows/guardian-v56-owner-acl-restore.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synth-role-restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore real custom PG17 synthetic dump preserving owner ACL DEFAULT ACL and RLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull postgres:17 >/dev/null
+          root=$(mktemp -d)
+          source_name="r62_v56_source_$RANDOM"
+          dest_name="r62_v56_dest_$RANDOM"
+          net="r62_v56_internal_$RANDOM"
+          docker network create --internal "$net" >/dev/null
+          cleanup() {
+            docker rm -f "$source_name" "$dest_name" >/dev/null 2>&1 || true
+            docker network rm "$net" >/dev/null 2>&1 || true
+            rm -rf "$root"
+          }
+          trap cleanup EXIT
+          docker run -d --pull never --name "$source_name" --network "$net" --label r62.v56=synthetic \
+            -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
+          docker run -d --pull never --name "$dest_name" --network "$net" --label r62.v56=synthetic \
+            -e POSTGRES_PASSWORD=synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
+          for c in "$source_name" "$dest_name"; do
+            stable=0
+            for i in $(seq 1 60); do
+              if docker exec --user postgres "$c" psql -X -qAt -w -U postgres -d fixture -c 'SELECT 1' 2>/dev/null | grep -qx 1; then
+                stable=$((stable+1))
+                if [ "$stable" -ge 4 ]; then break; fi
+              else
+                stable=0
+              fi
+              sleep 0.75
+            done
+            if [ "$stable" -lt 4 ]; then echo 'TARGET_DB_NOT_STABLE'; exit 1; fi
+          done
+          cat >"$root/roles.sql" <<'SQL'
+          CREATE ROLE r62_fixture_owner NOLOGIN;
+          CREATE ROLE r62_fixture_reader NOLOGIN;
+          SQL
+          cat >"$root/structure.sql" <<'SQL'
+          CREATE SCHEMA fixture AUTHORIZATION r62_fixture_owner;
+          CREATE TABLE fixture.jobs(id integer PRIMARY KEY, state text NOT NULL);
+          ALTER TABLE fixture.jobs OWNER TO r62_fixture_owner;
+          INSERT INTO fixture.jobs VALUES (1,'SYNTHETIC_TEST_ONLY');
+          CREATE INDEX jobs_state_idx ON fixture.jobs(state);
+          GRANT SELECT ON fixture.jobs TO r62_fixture_reader;
+          ALTER DEFAULT PRIVILEGES FOR ROLE r62_fixture_owner IN SCHEMA fixture
+            GRANT SELECT ON TABLES TO r62_fixture_reader;
+          ALTER TABLE fixture.jobs ENABLE ROW LEVEL SECURITY;
+          CREATE POLICY jobs_select ON fixture.jobs FOR SELECT USING (true);
+          SQL
+          docker exec -i --user postgres "$source_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/roles.sql"
+          docker exec -i --user postgres "$source_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/structure.sql"
+          docker exec --user postgres "$source_name" pg_dump -Fc -w -U postgres -d fixture >"$root/schema.dump"
+          docker exec --user postgres "$source_name" pg_dumpall --globals-only -w -U postgres >"$root/globals.sql"
+          grep -q 'r62_fixture_owner' "$root/globals.sql"
+          grep -q 'r62_fixture_reader' "$root/globals.sql"
+          echo 'SOURCE_GLOBAL_ROLES_CAPTURED=YES'
+          if docker exec -i --user postgres "$dest_name" pg_restore --exit-on-error --single-transaction \
+              -U postgres -d fixture <"$root/schema.dump" >"$root/fail.out" 2>&1; then
+            echo 'MISSING_ROLE_SHOULD_HAVE_BLOCKED'; exit 1
+          fi
+          status=$(docker exec --user postgres "$dest_name" psql -X -qAt -w -U postgres -d fixture \
+            -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='r'")
+          test "$status" = '0'
+          echo 'MISSING_ROLE_FAILED_CLOSED_WITHOUT_PARTIAL_TABLES=PASS'
+          # Explicitly approved role definitions for this synthetic lab only.
+          docker exec -i --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/roles.sql"
+          docker exec -i --user postgres "$dest_name" pg_restore --exit-on-error --single-transaction \
+            -U postgres -d fixture <"$root/schema.dump"
+          cat >"$root/check.sql" <<'SQL'
+          BEGIN READ ONLY;
+          SELECT
+            (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='r')::text||'|'||
+            (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='r' AND c.relowner='r62_fixture_owner'::regrole)::text||'|'||
+            (SELECT count(*) FROM pg_default_acl a JOIN pg_namespace n ON n.oid=a.defaclnamespace WHERE n.nspname='fixture' AND a.defaclrole='r62_fixture_owner'::regrole AND a.defaclobjtype='r')::text||'|'||
+            (SELECT has_table_privilege('r62_fixture_reader','fixture.jobs','SELECT'))::text||'|'||
+            (SELECT count(*) FROM pg_policy p JOIN pg_class c ON c.oid=p.polrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture')::text||'|'||
+            (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relrowsecurity)::text||'|'||
+            (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='fixture' AND c.relkind='i')::text||'|'||
+            (SELECT count(*) FROM fixture.jobs)::text;
+          ROLLBACK;
+          SQL
+          report=$(docker exec -i --user postgres "$dest_name" psql -X -qAt -w -v ON_ERROR_STOP=1 -U postgres -d fixture <"$root/check.sql")
+          if [ "$report" != '1|1|1|true|1|1|2|1' ]; then
+            echo 'SYNTHETIC_CATALOG_POSTCHECK_FAILED'
+            exit 1
+          fi
+          echo 'PG17_RESTORE_OWNER_PRESERVED=PASS'
+          echo 'PG17_RESTORE_ACL_PRESERVED=PASS'
+          echo 'PG17_RESTORE_DEFAULT_ACL_PRESERVED=PASS'
+          echo 'PG17_RESTORE_RLS_POLICY_INDEXES_DATA=PASS'
+          echo 'PG17_NO_OWNER_OR_NO_PRIVILEGES_FLAGS_USED=YES'
+          echo 'REAL_TAXIRADAR_DATABASE_USED=NO'
