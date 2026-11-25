@@ -1,0 +1,51 @@
+name: Bridge V6 full offline integration
+on:
+  push:
+    paths:
+      - 'scripts/Receive-BridgeV6.ps1'
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-full-integration.yml'
+  pull_request:
+    paths:
+      - 'scripts/Receive-BridgeV6.ps1'
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-full-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receiver-offline:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Signed request accepted once, replay blocked
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
+          $rsa.PersistKeyInCsp=$false
+          try {
+            $root=Join-Path $env:RUNNER_TEMP 'bridge-v6-test'
+            [IO.Directory]::CreateDirectory($root) | Out-Null
+            $private=Join-Path $root 'private.xml'
+            $public=Join-Path $root 'public.xml'
+            $request=Join-Path $root 'request.json'
+            $state=Join-Path $root 'state'
+            [IO.File]::WriteAllText($private,$rsa.ToXmlString($true))
+            [IO.File]::WriteAllText($public,$rsa.ToXmlString($false))
+            $signed=@(& ./scripts/New-BridgeV6SignedRequest.ps1 -Command AUDIT_PREFLIGHT -PrivateKeyXmlPath $private -OutputPath $request)
+            if($signed -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'Signer failed'}
+            $output=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if($output -notmatch 'AUDIT_SCRIPT_' -or $output -notmatch 'RECEIVER_STOPPED'){throw 'Signed request did not run expected preflight'}
+            $repeat=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if($repeat -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
+            $obj=Get-Content -LiteralPath $request -Raw | ConvertFrom-Json
+            $obj.command='SEMANTICS'
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
+            $unsafe=@(& ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if($unsafe -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
+          } finally {$rsa.Dispose()}
