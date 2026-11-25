@@ -36,7 +36,7 @@ try{
   if((Get-FileHash -LiteralPath $childInLab -Algorithm SHA256).Hash -ne $expectedHash){throw 'HEALTH_STAGE_MISMATCH'}
   $response=Test-R62SandboxChildHealth -LabRoot $lab -ChildFile $childInLab -Mode Good -TimeoutMs 5000
   return ($response -eq '[OK] CHILD_HEALTH_VERIFIED')
- }.GetNewClosure()
+ }
  $result=Invoke-R62SandboxSwap -LabRoot $swapLab -StagedFile $candidate -HealthProbe $healthProbe
  Check ($result -eq '[OK] SANDBOX_SWAPPED_AND_HEALTHY') 'SWAP_AFTER_REAL_PROCESS_HEALTH'
  Check ((Get-FileHash -LiteralPath $old -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash) 'HEALTHY_BYTES_APPLIED'
@@ -48,7 +48,7 @@ try{
   Copy-Item -LiteralPath $updatedFile -Destination $childInLab -Force
   $response=Test-R62SandboxChildHealth -LabRoot $lab -ChildFile $childInLab -Mode Wrong -TimeoutMs 5000
   return ($response -eq '[OK] CHILD_HEALTH_VERIFIED')
- }.GetNewClosure()
+ }
  $failed=$false
  try{Invoke-R62SandboxSwap -LabRoot $swapLab -StagedFile $candidate -HealthProbe $healthFailure|Out-Null}catch{$failed=($_.Exception.Message -eq 'HEALTH_CHALLENGE_MISMATCH')}
  Check $failed 'INVALID_CHILD_HANDSHAKE_BLOCKED'
@@ -58,7 +58,9 @@ try{
  Write-Output '[NAO_EXECUTADO] Guardian ativo, Docker, PostgreSQL, rede, update'
 $global:LASTEXITCODE=0
 }catch{
- $safe=[string]$_.Exception.Message -replace '[^A-Z0-9_]','?'
+ $detail=[string]$_.Exception.Message
+ $safe=($detail -replace '[^A-Za-z0-9_]','_')
+ if($safe.Length -gt 110){$safe=$safe.Substring(0,110)}
  Write-Output ('[BLOQUEADO] '+$safe);exit 1
 }finally{
  Remove-Item -LiteralPath $lab -Recurse -Force -ErrorAction SilentlyContinue
