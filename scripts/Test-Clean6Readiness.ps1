@@ -2,7 +2,8 @@
 # Never opens encrypted backups, asks a password, runs SQL, or changes Docker.
 [CmdletBinding()]
 param(
-  [string]$AuditScriptPath=(Join-Path $env:TEMP 'R62-Clean6-Semantics-v141.mjs')
+  [string]$AuditScriptPath=(Join-Path $env:TEMP 'R62-Clean6-Semantics-v141.mjs'),
+  [switch]$SkipDocker
 )
 $ErrorActionPreference='Stop'
 $lines=[System.Collections.Generic.List[string]]::new()
@@ -13,7 +14,8 @@ try {
   $lines.Add('NODE_AVAILABLE='+[bool]$node)
   $docker=Get-Command docker -ErrorAction SilentlyContinue
   $lines.Add('DOCKER_AVAILABLE='+[bool]$docker)
-  if($docker) {
+  $lines.Add('DOCKER_CHECK_SKIPPED='+[bool]$SkipDocker)
+  if($docker -and -not $SkipDocker) {
     $null=& docker info --format '{{.ServerVersion}}' 2>$null
     $ok=($LASTEXITCODE -eq 0)
     $lines.Add('DOCKER_ENGINE_OK='+$ok)
