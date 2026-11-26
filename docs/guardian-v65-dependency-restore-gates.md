@@ -29,3 +29,10 @@ As 9 entradas não classificadas podem ser tipos de TOC sem proprietário (ex.: 
 - Nenhum deploy automático, PR continua draft, sem atualização do agente em operação.
 - Backups manuais antes das alterações, não job a cada quatro horas.
 - Próxima implementação proposta: aprimorar a classificação de owners e produzir **contagens por classe de ambiguidade**; validar em CI com PG17 sintético antes de repetir qualquer operação no backup real.
+
+## Implementação experimental V6.5 — auditor separado
+- `scripts/GuardianV65-TocShapeRiskAudit.mjs` faz classificação de formato **somente em memória**. Não emite nomes de objetos, roles ou extensões, não executa SQL e não reivindica propriedade histórica.
+- `scripts/test-GuardianV65-TocShapeRiskAudit.mjs` cobre colunas vazias de extensão, tipos desconhecidos, identificadores com aspas, IDs duplicados e impedimento explícito de inferir roles verificadas.
+- A pipeline `guardian-v54-catalog.yml` inclui os testes V6.5 junto ao dump sintético PG17; não lê o backup real em CI.
+- **Não há integração do auditor novo com o operador local neste commit.** O operador autenticado V6.4.2 permanece intocado. A inclusão em CI não significa aprovação até que runs no SHA final sejam verificadas.
+- **Atenção às métricas:** `typesWithoutOwnerProof` conta entradas cujo *tipo* não autoriza inferir proprietário, e não prova que essas entradas não tenham proprietário no PostgreSQL. `structuralOwnerCandidatesOnly` também não representa roles reais.
