@@ -28,6 +28,7 @@ const extra=[
 ];
 const enhanced=good.replace('END_REPORT_OK',extra.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(enhanced).items,919);
+assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_DISTINCT_EXTENSIONS=6','DEPENDENCY_DISTINCT_EXTENSIONS=999')),e=>e.message==='DEPENDENCY_COUNTER_INCONSISTENT');
 assert.equal(parseSafeReport(good).items,919);
 assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO','DEPENDENCY_ROLE_GRANTEES_COMPLETE=YES')),e=>e.message==='REPORT_LIMIT_MISSING');
 const p=parseSafeReport(good);
