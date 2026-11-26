@@ -55,7 +55,8 @@ function checkPath(root,relative){
  if(!under(root,f.real))fail('SYMLINK_OR_ESCAPE_BLOCKED');
  return f;
 }
-export function checkSignedBundle({bundleRoot,manifestFile,signatureFile,publicKeyFile,vaultFile}){
+export function checkSignedBundle({bundleRoot,manifestFile,signatureFile,publicKeyFile,vaultFile,expectedKeySha256}){
+ if(typeof expectedKeySha256!=='string'||!HASH.test(expectedKeySha256))fail('TRUST_FINGERPRINT_REQUIRED');
  for(const item of [bundleRoot,manifestFile,signatureFile,publicKeyFile,vaultFile]){
   if(typeof item!=='string'||!path.isAbsolute(item))fail('INVALID_ARGUMENTS');
  }
@@ -78,6 +79,8 @@ export function checkSignedBundle({bundleRoot,manifestFile,signatureFile,publicK
  let key;
  try{key=crypto.createPublicKey(fs.readFileSync(pub.file));}catch{fail('INVALID_TRUST_ANCHOR');}
  if(key.asymmetricKeyType!=='ed25519')fail('TRUST_KEY_NOT_ED25519');
+ const trustedFingerprint=crypto.createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex');
+ if(trustedFingerprint!==expectedKeySha256.toLowerCase())fail('TRUST_KEY_FINGERPRINT_MISMATCH');
  const signature=fs.readFileSync(sig.file);
  if(signature.length!==64||!crypto.verify(null,raw,key,signature))fail('SIGNATURE_INVALID');
  const seenRoles=new Set(),seenFiles=new Set();
@@ -118,23 +121,22 @@ export function checkSignedBundle({bundleRoot,manifestFile,signatureFile,publicK
    else if(!s.isFile()||!allowed.has(fs.realpathSync(f)))fail('UNDECLARED_BUNDLE_FILE');
   }
  }
- const fingerprint=crypto.createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex');
- return {count:seenRoles.size,totalBytes:bytes,keySha16:fingerprint.slice(0,16).toUpperCase(),
+ return {count:seenRoles.size,totalBytes:bytes,keySha16:trustedFingerprint.slice(0,16).toUpperCase(),
   manifestSha16:crypto.createHash('sha256').update(raw).digest('hex').slice(0,16).toUpperCase()};
 }
 function cli(argv){
- if(argv.length!==10)fail('USAGE');
- const keys=['--bundle-root','--manifest','--signature','--trusted-public-key','--external-vault'];
+ if(argv.length!==12)fail('USAGE');
+ const keys=['--bundle-root','--manifest','--signature','--trusted-public-key','--external-vault','--expected-key-sha256'];
  const opts={};
- for(let i=0;i<10;i+=2){
+ for(let i=0;i<12;i+=2){
   if(!keys.includes(argv[i])||Object.hasOwn(opts,argv[i]))fail('USAGE');
   opts[argv[i]]=argv[i+1];
  }
- if(Object.keys(opts).length!==5)fail('USAGE');
+ if(Object.keys(opts).length!==6)fail('USAGE');
  const value=checkSignedBundle({
   bundleRoot:opts['--bundle-root'],manifestFile:opts['--manifest'],
   signatureFile:opts['--signature'],publicKeyFile:opts['--trusted-public-key'],
-  vaultFile:opts['--external-vault']
+  vaultFile:opts['--external-vault'],expectedKeySha256:opts['--expected-key-sha256']
  });
  console.log(['=== ROTA62 GUARDIAN V6.0 SIGNED BACKUP TRUST ===',
   'DETACHED_ED25519_SIGNATURE=PASS','TRUST_ANCHOR_EXTERNAL=YES',
@@ -155,7 +157,8 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
     'SYMLINK_OR_ESCAPE_BLOCKED','INVALID_TRUST_ANCHOR','TRUST_KEY_NOT_ED25519',
     'SIGNATURE_INVALID','INVALID_COMPONENT','DUPLICATE_COMPONENT_PATH',
     'COMPONENT_HASH_MISMATCH','MISSING_COMPONENT','MANIFEST_CHANGED',
-    'BUNDLE_ENTRY_LIMIT','BUNDLE_UNDECLARED_SYMLINK','UNDECLARED_BUNDLE_FILE']);
+    'BUNDLE_ENTRY_LIMIT','BUNDLE_UNDECLARED_SYMLINK','UNDECLARED_BUNDLE_FILE',
+    'TRUST_FINGERPRINT_REQUIRED','TRUST_KEY_FINGERPRINT_MISMATCH']);
   console.log('=== ROTA62 GUARDIAN V6.0 SIGNED BACKUP TRUST ===\nSTATUS=BLOCKED_'+
    (known.has(e.message)?e.message:'REDACTED')+
    '\nDATABASE_RESTORED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');
