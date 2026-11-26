@@ -59,6 +59,7 @@ const scope=[
 const v67=v66.replace('END_REPORT_OK',scope.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v67).items,919);
 const pairs=[
+ 'AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA',
  'PAIR_STRUCTURALLY_MATCHED=70',
  'PAIR_UNPAIRED_SIMPLE_TABLE=6',
  'PAIR_UNPAIRED_SIMPLE_DATA=1',
@@ -69,6 +70,11 @@ const pairs=[
 ];
 const v68=v67.replace('END_REPORT_OK',pairs.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v68).items,919);
+assert.equal(parseSafeReport(v67).items,919); // V6.7 backward compatibility.
+assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA','AUDIT_PROFILE=V68_DATA_PROVEN')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_DUPLICATE_NONUNIQUE=0','PAIR_DUPLICATE_NONUNIQUE=1')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v67.replace('END_REPORT_OK','AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA\nEND_REPORT_OK')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v68.replace('PAIR_STRUCTURALLY_MATCHED=70','PAIR_STRUCTURALLY_MATCHED=69')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v68.replace('PAIR_ROWS_VERIFIED=NO','PAIR_ROWS_VERIFIED=YES')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v68.replace('PAIR_AMBIGUOUS_DATA=2\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
