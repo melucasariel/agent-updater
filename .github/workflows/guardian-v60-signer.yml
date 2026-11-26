@@ -1,0 +1,35 @@
+name: Guardian V6.0 manual encrypted signing key
+on:
+  push:
+    paths:
+      - scripts/GuardianV60-SignPreparedBundle.mjs
+      - scripts/test-GuardianV60-SignPreparedBundle.mjs
+      - .github/workflows/guardian-v60-signer.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV60-SignPreparedBundle.mjs
+      - scripts/test-GuardianV60-SignPreparedBundle.mjs
+      - .github/workflows/guardian-v60-signer.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  manual-signer-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create signed synthetic offline backup using encrypted local Ed25519 key
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV60-SignPreparedBundle.mjs
+          if($LASTEXITCODE -ne 0){throw 'Signer syntax failure'}
+          node scripts/test-GuardianV60-SignPreparedBundle.mjs
+          if($LASTEXITCODE -ne 0){throw 'Signer test failed'}
+          $result=@(node scripts/GuardianV60-SignPreparedBundle.mjs --invalid-option unsafe)
+          if($LASTEXITCODE -ne 2 -or ($result -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unexpected unsafe CLI'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V60_LOCAL_MANUAL_SIGNING_ONLY=PASS'
