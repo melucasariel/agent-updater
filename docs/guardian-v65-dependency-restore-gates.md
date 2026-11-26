@@ -109,3 +109,8 @@ User-provided safe operator result on seven-file V6.7 integration (full 34/34 gr
 - V6.6 unchanged: six known PostgreSQL descriptor-kind entries not recognized by V6.5 and three other unknown; one nonstandard tail in a no-owner-proof type. Historical global roles/ACL not validated.
 - `PG_RESTORE_EXECUTED_SQL=NO`, `DATABASE_RESTORED=NO`, `ROLES_ACL_RESTORED=NO`, `PRODUCTION_TOUCHED=NO`.
 No credentials, schema/table/object names or backup data stored.
+
+## V6.8 experimental TABLE / TABLE DATA pairing audit
+`GuardianV68-TableDataPairAudit.mjs` now provides an **in-memory, diagnostic-only** pairing of entries whose schema, object and owner tokens are trivially ASCII-safe. It returns only bounded counters: uniquely paired entries, simple unpaired table entries, simple unpaired data entries, structurally ambiguous entries and duplicated/nonunique entries. It does **not** output, persist or hash identifiers (including names of tables or schemas). It does not inspect actual rows, deduce empty or missing tables, verify historical scope, or certify recoverability. Quoted/spaced names are treated as ambiguous; no false exact matches are asserted.
+
+Tests on invented private schemas/tables ensure counter reconciliation and no name output; Linux and Windows isolated CI configured. The experimental V6.8 module is **not wired** to the authenticated catalog or Windows operator yet. Existing seven-file V6.7 operator remains unchanged. **New commit CI not yet verified**; no real-backup execution authorized by this new module.
