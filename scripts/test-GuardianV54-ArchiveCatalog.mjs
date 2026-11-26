@@ -80,6 +80,17 @@ try{
   result.toc.tableDataPairs.ambiguousDataEntries,result.toc.counts.TABLE_DATA);
  assert.equal(result.toc.tableDataPairs.rowCountsVerified,false);
  assert.equal(result.toc.tableDataPairs.productionTouched,false);
+ assert.ok(result.toc.tableDataPairs.oidStructurallyMatched>=1);
+ assert.equal(result.toc.tableDataPairs.oidStructurallyMatched+
+  result.toc.tableDataPairs.oidTableOnly+
+  result.toc.tableDataPairs.oidDuplicateTable+
+  result.toc.tableDataPairs.oidInvalidTable,
+  result.toc.counts.TABLE);
+ assert.equal(result.toc.tableDataPairs.oidStructurallyMatched+
+  result.toc.tableDataPairs.oidDataOnly+
+  result.toc.tableDataPairs.oidDuplicateData+
+  result.toc.tableDataPairs.oidInvalidData,
+  result.toc.counts.TABLE_DATA);
  assert.equal(result.toc.tableDataPairs.ambiguousTableQuoted+
   result.toc.tableDataPairs.ambiguousTableUnicode+
   result.toc.tableDataPairs.ambiguousTableOther,
@@ -107,6 +118,10 @@ try{
  assert.ok(safe.includes('PAIR_REASON_TABLE_QUOTED='));
  assert.ok(safe.includes('PAIR_REASON_OWNER_TABLE='));
  assert.ok(safe.includes('PAIR_REASON_NONUNIQUE_DATA='));
+ assert.ok(safe.includes('PAIR_OID_MATCHED='));
+ assert.ok(safe.includes('PAIR_OID_INVALID_TABLE='));
+ assert.throws(()=>parseSafeReport(safe.replace(/PAIR_OID_MATCHED=\d+/,'PAIR_OID_MATCHED=999')),
+  e=>e.message==='PAIR_OID_COUNTER_INCONSISTENT');
  assert.throws(()=>parseSafeReport(safe.replace(/PAIR_REASON_TABLE_QUOTED=\d+/,'PAIR_REASON_TABLE_QUOTED=999')),
   e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
 
