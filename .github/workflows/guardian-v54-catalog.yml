@@ -78,6 +78,15 @@ jobs:
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           node scripts/test-GuardianV69-PatchGate.mjs
           node scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs "$root/synthetic.dump"
+          # Re-run authenticated synthetic integration when NONE of the
+          # hardcoded tags exists. Only the discovered custom local name works.
+          docker tag postgres:17-alpine guardian-ci/postgres:17.12-local
+          docker image rm postgres:17-alpine >/dev/null
+          if docker image inspect postgres:17-alpine >/dev/null 2>&1; then
+            echo "Prior fallback tag unexpectedly present"; exit 1
+          fi
+          node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
+          echo "PG17_IMAGE_DISCOVERED_WITH_CUSTOM_LOCAL_TAG=PASS"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
           echo 'V54_DOCKER_NETWORKLESS_PG_RESTORE_LIST=PASS'
