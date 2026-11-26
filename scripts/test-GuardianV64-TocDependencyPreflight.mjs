@@ -38,6 +38,16 @@ assert.throws(()=>inspectToc('1; 0 1 TABLE x t p'),e=>e.message==='TOC_ITEMS_INV
 const ownerless=toc
  .replace('EXTENSION - pgcrypto postgres','EXTENSION - pgcrypto')
  .replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_net');
+// In real PG17 output, an empty EXTENSION owner renders as a trailing
+// blank column. This exact formatting broke the previous real operator run.
+const whitespaceOwnerless=ownerless
+ .replace('EXTENSION - pgcrypto\n','EXTENSION - pgcrypto   \n')
+ .replace('EXTENSION - pg_net\n','EXTENSION - pg_net  \n');
+const whitespaceInfo=inspectToc(whitespaceOwnerless,meta);
+assert.equal(whitespaceInfo.extensionsListed,2);
+assert.equal(whitespaceInfo.distinctExtensions,2);
+assert.equal(whitespaceInfo.missingExtensionNames,1);
+assert.equal(whitespaceInfo.unclassifiedEntries,0);
 const ownerlessInfo=inspectToc(ownerless,meta);
 assert.equal(ownerlessInfo.extensionsListed,2);
 assert.equal(ownerlessInfo.distinctExtensions,2);
@@ -51,6 +61,7 @@ const flipped=toc.replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_tr
 assert.notEqual(inspectToc(toc).dependencyFingerprint16,inspectToc(flipped).dependencyFingerprint16);
 console.log('V64_ARCHIVE_OWNER_EXTENSION_COUNTS=PASS');
 console.log('V64_OWNERLESS_PG17_EXTENSION_NAMES_NOT_ROLES=PASS');
+console.log('V642_OWNERLESS_TRAILING_BLANK_COLUMN_NORMALIZED=PASS');
 console.log('V64_CURRENT_ROSTER_DIFFERENCE_NOT_HISTORICAL_PROOF=PASS');
 console.log('V64_TOC_DUPLICATES_INVALID_SOURCE=BLOCKED');
 console.log('V64_NO_SQL_NO_DB_NO_PRIVATE_NAMES_PRINTED=YES');
