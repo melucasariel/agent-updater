@@ -80,6 +80,19 @@ try{
   result.toc.tableDataPairs.ambiguousDataEntries,result.toc.counts.TABLE_DATA);
  assert.equal(result.toc.tableDataPairs.rowCountsVerified,false);
  assert.equal(result.toc.tableDataPairs.productionTouched,false);
+ assert.equal(result.toc.tableDataPairs.ambiguousTableQuoted+
+  result.toc.tableDataPairs.ambiguousTableUnicode+
+  result.toc.tableDataPairs.ambiguousTableOther,
+  result.toc.tableDataPairs.ambiguousTableEntries);
+ assert.equal(result.toc.tableDataPairs.simpleTableWithoutData+
+  result.toc.tableDataPairs.simpleTableOwnerMismatch+
+  result.toc.tableDataPairs.simpleNonuniqueTables,
+  result.toc.tableDataPairs.unpairedSimpleTableEntries);
+ assert.equal(result.toc.tableDataPairs.simpleDataWithoutTable+
+  result.toc.tableDataPairs.simpleDataOwnerMismatch+
+  result.toc.tableDataPairs.simpleNonuniqueData,
+  result.toc.tableDataPairs.unpairedSimpleDataEntries);
+
  // pg_dump PG17 partitioned parent has TABLE without an independent
  // TABLE DATA entry; emptiness/missing records must NOT be inferred.
  assert.ok(result.toc.counts.TABLE>=4);
@@ -91,6 +104,12 @@ try{
  assert.equal(typeof safe,'string');
  assert.ok(safe.includes('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA'));
  assert.ok(safe.includes('PAIR_ROWS_VERIFIED=NO'));
+ assert.ok(safe.includes('PAIR_REASON_TABLE_QUOTED='));
+ assert.ok(safe.includes('PAIR_REASON_OWNER_TABLE='));
+ assert.ok(safe.includes('PAIR_REASON_NONUNIQUE_DATA='));
+ assert.throws(()=>parseSafeReport(safe.replace(/PAIR_REASON_TABLE_QUOTED=\\d+/,'PAIR_REASON_TABLE_QUOTED=999')),
+  e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
+
  assert.ok(safe.endsWith('END_REPORT_OK'));
  assert.equal(safe.split('\n').length<=80,true);
  // The exact renderer used by main() must pass the actual V5.5 parser.
