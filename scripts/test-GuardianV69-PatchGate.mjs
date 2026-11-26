@@ -2,7 +2,9 @@
 import assert from 'node:assert/strict';
 import {verifyPg17PatchVersion} from './GuardianV54-ArchiveCatalog.mjs';
 
-for(const ok of ['pg_restore (PostgreSQL) 17.12','pg_restore (PostgreSQL) 17.13','pg_restore (PostgreSQL) 17.99'])
+for(const ok of ['pg_restore (PostgreSQL) 17.12','pg_restore (PostgreSQL) 17.13','pg_restore (PostgreSQL) 17.99',
+ 'pg_restore (PostgreSQL) 17.12 (Debian 17.12-1.pgdg13+1)',
+ 'pg_restore (PostgreSQL) 17.13 (Ubuntu 17.13-1.pgdg24.04+1)'])
  assert.equal(verifyPg17PatchVersion(ok),true);
 for(const unsafe of [null,'','17.12','pg_restore (PostgreSQL) 17.11',
  'pg_restore (PostgreSQL) 17.10','pg_restore (PostgreSQL) 17.9',
