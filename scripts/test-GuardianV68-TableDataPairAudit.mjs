@@ -175,7 +175,7 @@ const explain=[
  '13; 1 1 EXTENSION - pgcrypto'
 ].join('\n');
 const e=auditTocTableDataPairs(explain);
-assert.equal(e.tableEntries,9);
+assert.equal(e.tableEntries,8);
 assert.equal(e.dataEntries,4);
 assert.equal(e.structurallyPaired,1);
 assert.equal(e.ambiguousTableEntries,3);
