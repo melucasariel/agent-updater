@@ -32,12 +32,16 @@ jobs:
             if docker exec --user postgres "$src" psql -X -qAt -w -U postgres -d fixture -c 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
             sleep 1
           done
-          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true);"
+          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true);"
           docker exec --user postgres "$src" pg_dump -Fc -w -U postgres -d fixture > "$root/synthetic.dump"
           docker rm -f "$src" >/dev/null
           docker tag postgres:17 postgres:17-alpine
           docker image rm postgres:17 >/dev/null
           if docker image inspect postgres:17 >/dev/null 2>&1; then echo "Exact tag unexpectedly present"; exit 1; fi
+          # Independent real pg_restore listing: extension has an object name
+          # but no role owner token in PG17's custom archive TOC.
+          docker run --rm --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint pg_restore postgres:17-alpine --list < "$root/synthetic.dump" > "$root/toc"
+          node scripts/test-GuardianV64-TocDependencyPreflight.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
