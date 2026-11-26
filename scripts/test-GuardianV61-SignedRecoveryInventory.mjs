@@ -67,7 +67,7 @@ try{
  const oldKey=entries[2].keySha256;
  entries[2].keySha256='0'.repeat(64);
  save();
- assert.throws(()=>summarizeIndex(index,keySha256),/TRUST_KEY_FINGERPRINT_MISMATCH/);
+ assert.throws(()=>summarizeIndex(index,keySha256),e=>e.message==='UNTRUSTED_SIGNER_IN_INDEX');
  entries[2].keySha256=oldKey;
  save();
  // A previously signed bundle with same captureId but different content
