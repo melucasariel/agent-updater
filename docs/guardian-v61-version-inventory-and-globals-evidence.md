@@ -6,7 +6,7 @@ Continuar o V6.0 em duas dimensões prioritárias: saber **quais versões existe
 
 ## 1. Histórico de pacotes assinados
 
-`scripts/GuardianV61-SignedRecoveryInventory.mjs` aceita uma lista explícita de pastas de pacotes já preparados e assinados, com caminho para o cofre externo, chave pública Ed25519 e SHA256 **fixado independentemente** para a chave. O módulo chama o verificador V6.0 para cada pacote, autentica a assinatura e todos os SHA256 de artefatos e produz apenas contagens, nunca caminhos, nomes, passwords ou conteúdo de arquivos.
+`scripts/GuardianV61-SignedRecoveryInventory.mjs` aceita uma lista explícita de pastas de pacotes já preparados e assinados, com caminho para o cofre externo, chave pública Ed25519 e SHA256 de chave **conferido contra uma referência fixada fora do índice**. O módulo chama o verificador V6.0 para cada pacote, autentica a assinatura e todos os SHA256 de artefatos e produz apenas contagens, nunca caminhos, nomes, passwords ou conteúdo de arquivos.
 
 Um índice JSON privado deve ter este formato (usar caminhos absolutos locais reais, sem escrever secrets aqui):
 
@@ -24,7 +24,9 @@ Um índice JSON privado deve ter este formato (usar caminhos absolutos locais re
 }
 ```
 
-Execução: `node scripts/GuardianV61-SignedRecoveryInventory.mjs --inventory <absolute-index-json-path>`.
+Execução: `node scripts/GuardianV61-SignedRecoveryInventory.mjs --inventory <absolute-index-json-path> --trusted-key-sha256 <SHA256-FIXADO-FORA-DO-ÍNDICE>`.
+
+**Segurança adicional:** o campo `keySha256` do índice é considerado dado NÃO confiável. Um invasor poderia alterar juntos o índice e o arquivo da chave pública. O Guardian exige o mesmo SHA-256 da chave fornecido em parâmetro separado, obtido por um canal independente, e bloqueia divergências com `UNTRUSTED_SIGNER_IN_INDEX`. Não basta copiar o hash que está no índice para a opção externa: o operador deve conservar a referência original em armazenamento separado.
 
 Resultados: bundles com assinatura/autenticidade do manifesto verificada, hashes válidos de todos os componentes, pacotes completos distintos, cópias idênticas, quantidades de releases e identidades de chaves confiadas. Bloqueia colisão de `captureId` entre pacotes diferentes, repetição do mesmo caminho e substituição da chave assinante.
 
