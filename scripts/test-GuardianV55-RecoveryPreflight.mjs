@@ -40,6 +40,19 @@ const shape=[
 ];
 const v65=enhanced.replace('END_REPORT_OK',shape.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v65).items,919);
+const blind=[
+ 'BLIND_KNOWN_PUBLIC_KIND_ITEMS=5',
+ 'BLIND_OTHER_UNKNOWN_SHAPES=4',
+ 'BLIND_NONSTANDARD_CANDIDATE_ITEMS=1',
+ 'BLIND_NONSTANDARD_NO_PROOF_ITEMS=0',
+ 'BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'
+];
+const v66=v65.replace('END_REPORT_OK',blind.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v66).items,919);
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_OTHER_UNKNOWN_SHAPES=4','BLIND_OTHER_UNKNOWN_SHAPES=3')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_NONSTANDARD_CANDIDATE_ITEMS=1','BLIND_NONSTANDARD_CANDIDATE_ITEMS=0')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='BLIND_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_OTHER_UNKNOWN_SHAPES=4\n','')),e=>e.message==='BLIND_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v65.replace('SHAPE_RECOGNIZED_TYPES=910','SHAPE_RECOGNIZED_TYPES=911')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v65.replace('SHAPE_NO_OWNER_PROOF_ITEMS=600','SHAPE_NO_OWNER_PROOF_ITEMS=601')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v65.replace('SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='SHAPE_REPORT_INCOMPLETE');
@@ -70,6 +83,7 @@ const bad=[
  [invalid(good,'TOC_TABLE=77','TOC_TABLE=78'),'TOC_TOTAL_INCONSISTENT']
 ];
 for(const [txt,code] of bad)assert.throws(()=>parseSafeReport(txt),e=>e.message===code,'Expected '+code);
+console.log('V66_BLIND_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V65_SHAPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V55_AUTHENTICATED_REPORT_STRICT_PARSE=PASS');
 console.log('V55_TABLE_SCOPE_77_VS_76_REQUIRES_REVIEW=PASS');
