@@ -60,6 +60,10 @@ V20 reported `STATUS=PASS` for six local extension artifact checks on the image.
 
 Local V22 diagnostic: `STATUS=PASS`; PostgreSQL 17 offline local extension SQL artifact inventory identified 1 direct-install script, 15 update scripts, 1 unclassified SQL filename. A filename-graph path to `pg_cron 1.6.4` is reachable in minimum 8 update steps. The earlier V21 "17 direct / 0 updates / not reachable" was an artifact of a regex allowing version delimiters in version tokens; superseded by V22. **This is only filename-graph evidence**; no SQL, CREATE EXTENSION, preload validation, actual versions at backup time, or global roles restore. Next priority is historical global role artifact provenance and controlled version compatibility, not repeating synthetic startup or memory adjustments.
 
+## Historical roles artifact discovery and local Supabase CLI readiness — 2026-11-26
+
+Operator V23: selected a local `.r62db` backup folder containing 3 files and found zero additional filename-matched plain/encrypted roles or globals artifacts. This directory-only scan does **not** prove absence elsewhere or historical globals completeness. Operator V24: `STATUS=PASS`; local Supabase CLI present with `db dump --role-only` flag. No remote Supabase project contacted, no roles exported. **Next gate:** identify the intended source project locally and require explicit user approval before any remote export. Any freshly exported roles reflect current database state, **not automatically the historical state** at backup time. Preserve private project refs/secrets; do not restore against production/CLEAN6. 
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
