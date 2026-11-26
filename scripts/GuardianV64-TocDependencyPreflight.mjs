@@ -40,7 +40,7 @@ export function inspectToc(text,currentMetadata=null){
   if(type==='EXTENSION'){
    extensionEntries++;
    const match=/^EXTENSION - ([a-zA-Z_][a-zA-Z_0-9-]{0,127})(?: ([-a-zA-Z_][a-zA-Z_0-9$-]{0,127}))?$/.exec(payload);
-   if(!match){unclassifiedEntries++;continue;}
+   if(!match)fail('EXTENSION_TOC_FORMAT_UNSUPPORTED');
    ext.add(match[1]);
    if(match[2]&&match[2]!=='-'){
     if(owner.test(match[2]))owners.add(match[2]);
@@ -120,7 +120,7 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  try{cli(process.argv.slice(2));}
  catch(e){
   const known=new Set(['USAGE','TOC_SIZE_INVALID','TOC_ITEMS_INVALID','TOC_DUPLICATE_ID',
-   'CURRENT_METADATA_INVALID','PRIVATE_INPUT_INVALID']);
+   'CURRENT_METADATA_INVALID','PRIVATE_INPUT_INVALID','EXTENSION_TOC_FORMAT_UNSUPPORTED']);
   console.log('=== ROTA62 GUARDIAN V6.4 TOC DEPENDENCY PREFLIGHT ===\nSTATUS=BLOCKED_'+
    (known.has(e.message)?e.message:'REDACTED')+
    '\nSQL_EXECUTED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');
