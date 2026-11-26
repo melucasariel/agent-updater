@@ -15,6 +15,7 @@ const pair=crypto.generateKeyPairSync('ed25519');
 const encryptedKey=put(path.join(privateDir,'encrypted-private.pem'),
  pair.privateKey.export({format:'pem',type:'pkcs8',cipher:'aes-256-cbc',passphrase:password}));
 const publicKey=put(path.join(privateDir,'public.pem'),pair.publicKey.export({format:'pem',type:'spki'}));
+const expectedKeySha256=crypto.createHash('sha256').update(pair.publicKey.export({format:'der',type:'spki'})).digest('hex');
 const externalVault=put(path.join(privateDir,'vault.enc'),'SYNTHETIC_ONLY_ENCRYPTED_VAULT_PLACEHOLDER');
 for(const role of roles)put(path.join(bundle,role,'snapshot.bin'),'SYNTHETIC_'+role+'_DATA');
 const args={bundleRoot:bundle,privateKeyFile:encryptedKey,publicKeyFile:publicKey,
@@ -28,12 +29,12 @@ try{
  assert.equal(okay.count,8);
  assert.equal(fs.statSync(path.join(bundle,'manifest.sig')).size,64);
  assert.equal(checkSignedBundle({bundleRoot:bundle,manifestFile:path.join(bundle,'manifest.json'),
-  signatureFile:path.join(bundle,'manifest.sig'),publicKeyFile:publicKey,vaultFile:externalVault}).count,8);
+  signatureFile:path.join(bundle,'manifest.sig'),publicKeyFile:publicKey,vaultFile:externalVault,expectedKeySha256}).count,8);
  assert.throws(()=>signPreparedBundle(args),e=>e.message==='NO_OVERWRITE');
  // Even if the signing key is valid, a changed artifact must be rejected.
  fs.appendFileSync(path.join(bundle,'web','snapshot.bin'),'TAMPERED');
  assert.throws(()=>checkSignedBundle({bundleRoot:bundle,manifestFile:path.join(bundle,'manifest.json'),
-  signatureFile:path.join(bundle,'manifest.sig'),publicKeyFile:publicKey,vaultFile:externalVault}),
+  signatureFile:path.join(bundle,'manifest.sig'),publicKeyFile:publicKey,vaultFile:externalVault,expectedKeySha256}),
   e=>e.message==='COMPONENT_HASH_MISMATCH');
  console.log('V60_MANUAL_SIGNER_ENCRYPTED_PRIVATE_KEY=PASS');
  console.log('V60_SIGNING_PASSWORD_WRONG_OR_REUSED=BLOCKED');
