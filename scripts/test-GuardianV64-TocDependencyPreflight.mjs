@@ -48,6 +48,7 @@ assert.equal(whitespaceInfo.extensionsListed,2);
 assert.equal(whitespaceInfo.distinctExtensions,2);
 assert.equal(whitespaceInfo.missingExtensionNames,1);
 assert.equal(whitespaceInfo.unclassifiedEntries,0);
+assert.throws(()=>inspectToc(whitespaceOwnerless.replace('EXTENSION - pgcrypto   ','EXTENSION - pgcrypto invalid owner col')),e=>e.message==='EXTENSION_TOC_FORMAT_UNSUPPORTED');
 const ownerlessInfo=inspectToc(ownerless,meta);
 assert.equal(ownerlessInfo.extensionsListed,2);
 assert.equal(ownerlessInfo.distinctExtensions,2);
@@ -62,6 +63,7 @@ assert.notEqual(inspectToc(toc).dependencyFingerprint16,inspectToc(flipped).depe
 console.log('V64_ARCHIVE_OWNER_EXTENSION_COUNTS=PASS');
 console.log('V64_OWNERLESS_PG17_EXTENSION_NAMES_NOT_ROLES=PASS');
 console.log('V642_OWNERLESS_TRAILING_BLANK_COLUMN_NORMALIZED=PASS');
+console.log('V642_UNKNOWN_EXTENSION_LAYOUT_REJECTED_NOT_SILENTLY_ZERO=PASS');
 console.log('V64_CURRENT_ROSTER_DIFFERENCE_NOT_HISTORICAL_PROOF=PASS');
 console.log('V64_TOC_DUPLICATES_INVALID_SOURCE=BLOCKED');
 console.log('V64_NO_SQL_NO_DB_NO_PRIVATE_NAMES_PRINTED=YES');
