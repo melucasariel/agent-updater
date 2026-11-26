@@ -48,7 +48,7 @@ jobs:
             if docker exec --user postgres "$src" psql -X -qAt -w -U postgres -d fixture -c 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
             sleep 1
           done
-          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true);"
+          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true); CREATE TABLE public.partition_parent (id integer, state text) PARTITION BY RANGE (id); CREATE TABLE public.partition_child PARTITION OF public.partition_parent FOR VALUES FROM (0) TO (100); INSERT INTO public.partition_parent VALUES (12, 'PARTITION'); CREATE TABLE public.fixture_empty (id integer);"
           docker exec --user postgres "$src" pg_dump -Fc -w -U postgres -d fixture > "$root/synthetic.dump"
           docker rm -f "$src" >/dev/null
           docker tag postgres:17 postgres:17-alpine
