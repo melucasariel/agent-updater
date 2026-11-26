@@ -78,6 +78,24 @@ assert.equal(u.unpairedSimpleDataEntries,0);
 assert.equal(u.duplicateOrNonUniqueEntries,0);
 for(const word of ['mixed case','quoted schema','proprietário','simple_fixture'])
  assert.equal(JSON.stringify(u).includes(word),false);
+// A difference between textual owner fields must not create a false pair.
+// These strings are not authenticated global-role or ownership evidence.
+const conflictingOwner=[
+ '1; 1 1 TABLE public owned_private fixture_owner',
+ '2; 1 1 TABLE DATA public owned_private other_owner',
+ '3; 1 1 TABLE public valid_private fixture_owner',
+ '4; 1 1 TABLE DATA public valid_private fixture_owner',
+ '5; 1 1 EXTENSION - pgcrypto'
+].join('\n');
+const owners=auditTocTableDataPairs(conflictingOwner);
+assert.equal(owners.structurallyPaired,1);
+assert.equal(owners.unpairedSimpleTableEntries,1);
+assert.equal(owners.unpairedSimpleDataEntries,1);
+assert.equal(owners.duplicateOrNonUniqueEntries,0);
+for(const word of ['owned_private','fixture_owner','other_owner'])
+ assert.equal(JSON.stringify(owners).includes(word),false);
+console.log('V68_OWNER_TOKEN_MISMATCH_NOT_PAIRED=PASS');
+
 console.log('V68_DATA_ONLY_DUPLICATES_COUNTED=PASS');
 console.log('V68_REPEATED_PAIR_DEMOTED=PASS');
 console.log('V68_QUOTED_UNICODE_AND_OWNER_AMBIGUITY=PASS');
