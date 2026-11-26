@@ -56,11 +56,11 @@ const scope=[
  'SCOPE_COMPLEX_SCHEMA_TABLES=1',
  'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO'
 ];
-const v67=v66.replace('END_REPORT_OK',scope.join('\\n')+'\\nEND_REPORT_OK');
+const v67=v66.replace('END_REPORT_OK',scope.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v67).items,919);
 assert.throws(()=>parseSafeReport(v67.replace('SCOPE_PUBLIC_SCHEMA_TABLES=70','SCOPE_PUBLIC_SCHEMA_TABLES=69')),e=>e.message==='SCOPE_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v67.replace('SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO','SCOPE_ORIGINAL_USER_TABLES_VALIDATED=YES')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
-assert.throws(()=>parseSafeReport(v67.replace('SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=6\\n','')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v67.replace('SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=6\n','')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v66.replace('BLIND_OTHER_UNKNOWN_SHAPES=4','BLIND_OTHER_UNKNOWN_SHAPES=3')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v66.replace('BLIND_NONSTANDARD_CANDIDATE_ITEMS=1','BLIND_NONSTANDARD_CANDIDATE_ITEMS=0')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v66.replace('BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='BLIND_REPORT_INCOMPLETE');
