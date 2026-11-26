@@ -68,3 +68,9 @@ Referências: `docs/guardian-error-ledger-and-nonregression.md`, `docs/guardian-
 ### Proteção anti-substituição da identidade de assinatura
 
 O verificador V6.0 exige agora `--expected-key-sha256` (SHA-256 do DER SPKI da chave pública) obtido **fora do pacote**. Ele não aceita apenas um `trusted-public.pem` que poderia ser substituído pelo mesmo invasor capaz de adulterar os arquivos. O teste de regressão tenta trocar a chave pública e força `TRUST_KEY_FINGERPRINT_MISMATCH`. Essa pinagem deve ser registrada em local independente do disco/arquivo que contém os backups; a chave privada é armazenada offline e criptografada. Nenhuma chave real foi criada ou compartilhada neste desenvolvimento.
+
+## Ensaio integrado V6.0
+
+A bateria `.github/workflows/guardian-v60-integrated-ceremony.yml` cobre em Windows e Linux o fluxo **preparar → assinar com private key PKCS#8 criptografada → verificar com fingerprint Ed25519 previamente conhecido → adulterar cópia assinada e recusar**. Ela usa arquivos artificiais com `R62DB02` de teste, nunca o ciphertext do TaxiRadar e nunca a senha do usuário. O snapshot de origem pode mudar depois da cópia sem alterar o pacote já assinado; alterar o próprio pacote após assinar causa `COMPONENT_HASH_MISMATCH`.
+
+O fluxo completo ainda exige depois uma **captura consistente real de todos os serviços** (Web, API, Storage, DNS, config, globals, banco e secrets em cofre); não transformar esse módulo sintético de preparação em um “backup pronto” sem esses capturadores, sem teste de recuperação e sem prova de RTO.
