@@ -128,11 +128,21 @@ function classifyTOC(s){
  }
  return {items:rows.length,counts};
 }
-async function catalogFromEncrypted(file,passwd){
+function ciphertextHash(file){
+ return new Promise((resolve,reject)=>{
+  const h=crypto.createHash('sha256');
+  const stream=fs.createReadStream(file);
+  stream.on('error',()=>reject(Error('CIPHERTEXT_RECHECK_FAILED')));
+  stream.on('data',buf=>h.update(buf));
+  stream.on('end',()=>resolve(h.digest('hex')));
+ });
+}
+async function catalogFromEncrypted(file,passwd,expectedCipherSha,expectedPlainSha){
  const selectedImage=localDocker();
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
  let child=null,stdout='',badOutput=false,failed=false;
+ const secondPlainHash=crypto.createHash('sha256');
  try{
   const args=['run','--rm','-i','--pull','never','--network','none','--read-only',
    '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','64','--memory','256m',
@@ -155,6 +165,7 @@ async function catalogFromEncrypted(file,passwd){
   const decrypted=fs.createReadStream(file,{start:m.start,end:m.end}).pipe(decipher);
   try{
    for await(const chunk of decrypted){
+    secondPlainHash.update(chunk);
     if(child.stdin.writable&&!child.stdin.destroyed){
      if(!child.stdin.write(chunk)){
       await new Promise(resolve=>{
@@ -174,6 +185,11 @@ async function catalogFromEncrypted(file,passwd){
   clearTimeout(watchdog);
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
   if(exit!==0||badOutput)fail('PG_RESTORE_LIST_FAILED');
+  // Second pass must still be the exact authenticated archive: reject a
+  // concurrent swap to another valid AES-GCM envelope or a mid-read mutation.
+  if(secondPlainHash.digest('hex')!==expectedPlainSha||
+     await ciphertextHash(file)!==expectedCipherSha)
+    fail('CIPHERTEXT_CHANGED_BETWEEN_PASSES');
   const catalog=classifyTOC(stdout);
   const dependencySummary=inspectToc(stdout);
   const shapeAudit=auditTocShape(stdout);
@@ -209,7 +225,7 @@ async function catalogFromEncrypted(file,passwd){
 export async function examine(file,sha,password){
  const auth=await authenticate(file,sha,password);
  if(auth.bytes<32)fail('INVALID_PLAINTEXT');
- const toc=await catalogFromEncrypted(file,password);
+ const toc=await catalogFromEncrypted(file,password,sha.toLowerCase(),auth.plainSha256);
  return {auth,toc};
 }
 // Pure report contract, shared by authenticated production path and synthetic tests.
