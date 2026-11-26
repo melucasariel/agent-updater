@@ -37,6 +37,9 @@ try{
  // pg_restore -l classifies data separately but never accesses the database.
  assert.ok((result.toc.counts.TABLE_DATA||0)>=1);
  assert.ok((result.toc.counts.POLICY||0)>=1);
+ assert.ok(result.toc.dependencySummary.distinctVisibleOwnerRoles>=1);
+ assert.ok(result.toc.dependencySummary.entries===result.toc.items);
+ assert.ok(result.toc.dependencySummary.dependencyFingerprint16.length===16);
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
