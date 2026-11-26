@@ -9,6 +9,8 @@ on:
       - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
       - scripts/GuardianV67-TableScopeAudit.mjs
       - scripts/test-GuardianV67-TableScopeAudit.mjs
+      - scripts/GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   pull_request:
@@ -20,6 +22,8 @@ on:
       - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
       - scripts/GuardianV67-TableScopeAudit.mjs
       - scripts/test-GuardianV67-TableScopeAudit.mjs
+      - scripts/GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   workflow_dispatch:
@@ -60,6 +64,8 @@ jobs:
           node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
           node --check scripts/GuardianV67-TableScopeAudit.mjs
           node scripts/test-GuardianV67-TableScopeAudit.mjs
+          node --check scripts/GuardianV68-TableDataPairAudit.mjs
+          node scripts/test-GuardianV68-TableDataPairAudit.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
@@ -75,6 +81,10 @@ jobs:
           if($LASTEXITCODE -ne 0){throw 'V67 Node parser failed'}
           node scripts/test-GuardianV67-TableScopeAudit.mjs
           if($LASTEXITCODE -ne 0){throw 'V67 Node test failed'}
+          node --check scripts/GuardianV68-TableDataPairAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V68 Node parser failed'}
+          node scripts/test-GuardianV68-TableDataPairAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V68 Node test failed'}
           node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
           if($LASTEXITCODE -ne 0){throw 'V66 Node parser failed'}
           node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
