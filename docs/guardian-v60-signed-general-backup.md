@@ -1,5 +1,16 @@
 # ROTA62 Guardian V6.0 — assinatura independente e cadeia de custódia do Backup Geral
 
+## Atualização V6.0 — preparação manual atômica antes da assinatura
+
+Acrescentado `scripts/GuardianV60-PrepareOfflineBundle.mjs`, que recebe uma configuração local com exatamente oito caminhos de arquivos **já capturados**, um SHA-256 esperado para cada um e um diretório de laboratório marcado como offline. Ele confere os oito hashes antes de copiar, monta sete arquivos na pasta temporária, reconfere origem e destino, mantém o cofre fora do pacote e publica a nova pasta por rename sem sobrescrever.
+
+O formato de entrada é `r62-guardian-v60-prepared-files-1` com `captureId`, `release` e `components.{database,web,api,storage,dns,config,globals,secrets-vault}.{path,sha256}`; cada path é absoluto, não pode ser symlink nem estar dentro do laboratório. A entrada `database` exige o cabeçalho externo `R62DB02`. Os oito arquivos de entrada precisam ter sido produzidos **antes**, com ferramentas oficiais; o programa não captura sites ativos ou objetos Storage.
+
+Ordem modular: **Preparar pacote offline → Assinar manifesto com chave privada criptografada fora do pacote → Verificar assinatura com chave pública confiável independente → Avaliar pré-requisitos e testar restauração**. A simples assinatura e a cópia não permitem declarar o aplicativo recuperável.
+
+A atomicidade refere-se à publicação por rename e tratamento de falhas de software; não substitui cópias externas, fsync/durabilidade em queda de energia nem consistência transacional entre serviços. Não usar em produção sem completar os demais gates.
+
+---
 ## O que a primeira entrega implementa
 
 Após o V5.9, o Guardian tem sete componentes identificados e um stage offline de seis componentes, mas os manifests eram apenas SHA256 *auto-declarados* — qualquer pessoa que alterasse um arquivo poderia recalcular o manifesto. O V6.0 implementa um **manifesto separado com assinatura digital Ed25519**, desde que a chave pública de verificação tenha sido entregue e confiada ao operador **por um canal independente**.
