@@ -194,12 +194,12 @@ export async function main(argv){
   'DECRYPTED_PG_CUSTOM_HEADER=YES','PG_RESTORE_CATALOG=PASS',
   'ARCHIVE_CONTENT_SHA16='+result.auth.plainSha256.slice(0,16).toUpperCase(),
   'ARCHIVE_CATALOG_ITEMS='+result.toc.items,
-  'TOC_DISTINCT_VISIBLE_OWNER_ROLES='+result.toc.dependencySummary.distinctVisibleOwnerRoles,
-  'TOC_DISTINCT_EXTENSION_NAMES='+result.toc.dependencySummary.distinctExtensions,
-  'TOC_DEPENDENCIES_UNCLASSIFIED='+result.toc.dependencySummary.unclassifiedEntries,
-  'TOC_DEPENDENCIES_AMBIGUOUS_OWNER='+result.toc.dependencySummary.ambiguousOwner,
-  'TOC_DEPENDENCIES_SHA16='+result.toc.dependencySummary.dependencyFingerprint16,
-  'OWNER_MEMBERSHIP_AND_ACL_GRANTEES_COMPLETE=NO'];
+  'DEPENDENCY_VISIBLE_OWNER_ROLES='+result.toc.dependencySummary.distinctVisibleOwnerRoles,
+  'DEPENDENCY_DISTINCT_EXTENSIONS='+result.toc.dependencySummary.distinctExtensions,
+  'DEPENDENCY_UNCLASSIFIED_TOC_ENTRIES='+result.toc.dependencySummary.unclassifiedEntries,
+  'DEPENDENCY_AMBIGUOUS_TOC_OWNER_ENTRIES='+result.toc.dependencySummary.ambiguousOwner,
+  'DEPENDENCY_SHA16='+result.toc.dependencySummary.dependencyFingerprint16,
+  'DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO'];
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
