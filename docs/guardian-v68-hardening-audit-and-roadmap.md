@@ -160,6 +160,10 @@ Operator V47 `STATUS=PASS`, `PACKAGE_HEADER_VALID=YES`, `AES_GCM_AUTHENTICATED=Y
 
 Operator V48 `STATUS=BLOCKED`, `LAST_STAGE=SELECT_DESTINATION`, `DESTINATION_SELECTION`. Package magic validated, **zero copies created**, no original deletion; cannot conclude whether user cancelled the FolderBrowserDialog or folder dialog failed. Prepared V49 command that avoids Windows FolderBrowserDialog entirely, asks for target drive letter, validates source/target on distinct physical disks via `Get-Partition`/`Get-Disk`, creates only `ROTA62-Guardian-Backup` on selected target and copies the cipher file with CreateNew, checks SHA-256 source before/after and target, emits sanitized clipboard report. This is a physical-disk separation check, not proof of external/offsite media, hardware reliability or independent cross-machine decryption. No production/SQL/CLEAN6 touch. Keep portable V45 package and password separate. If disk mapping unknown, stop safely.
 
+## V49 ciphertext replica verified on another local physical disk — 2026-11-26
+
+Operator V49 `STATUS=PASS`, `SOURCE_HEADER_VALID=YES`, `DIFFERENT_PHYSICAL_DISK=YES`, `ENCRYPTED_COPY_CREATED=YES`, source SHA-256 stable before/after, destination SHA-256 matched. `TARGET_BUS_INFORMATION=BUS_TYPE_NOT_USB`: disk is *not proven to be external/removable*, only different physical disk. No password, no plaintext, no original deletion, no production or CLEAN6. Next: verify independent decryption of destination copy itself by directing read-only V47-equivalent recovery script to drive root `ROTA62-Guardian-Backup` and validating selected drive is different physical disk from Documents source. This tests local replica recoverability, not different machine or offsite disaster survival. Record SHA and custody independently; keep portable password separate. Historical globals remain unverified.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
