@@ -68,9 +68,11 @@ export function summarizeIndex(indexFile){
   keys.add(entry.keySha256.toLowerCase());
  }
  return {signedBundles:index.entries.length,distinctPackages:packages.size,
-  distinctDatabasePoints:dbSnapshots.size,identicalPackageCopies:identicalCopies,
+  distinctEncryptedArchives:dbSnapshots.size,identicalPackageCopies:identicalCopies,
   releaseLabels:releases.size,trustedSignerKeys:keys.size,
-  // Same encrypted file copied N times is ONE database point, not N.
+  // Same encrypted file copied N times is ONE ciphertext identity, not N.
+  // Re-encrypting the SAME plaintext creates a new ciphertext SHA; therefore
+  // archive hash is NOT proof of a distinct database state or capture time.
   allManifestsCryptographicallyVerified:true,
   captureDateIndependentlyVerified:false};
 }
@@ -80,7 +82,8 @@ function cli(args){
  console.log(['=== ROTA62 GUARDIAN V6.1 SIGNED RECOVERY INVENTORY ===',
   'SIGNED_BACKUP_BUNDLES='+r.signedBundles,
   'DISTINCT_FULL_PACKAGES='+r.distinctPackages,
-  'DISTINCT_DATABASE_RECOVERY_POINTS='+r.distinctDatabasePoints,
+  'DISTINCT_ENCRYPTED_DATABASE_ARCHIVES='+r.distinctEncryptedArchives,
+  'DISTINCT_UNDERLYING_DATABASE_STATES_PROVEN=NO',
   'IDENTICAL_FULL_PACKAGE_COPIES='+r.identicalPackageCopies,
   'RELEASE_LABEL_COUNT='+r.releaseLabels,
   'TRUSTED_SIGNER_KEYS='+r.trustedSignerKeys,
