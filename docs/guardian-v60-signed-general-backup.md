@@ -13,12 +13,12 @@ A atomicidade refere-se à publicação por rename e tratamento de falhas de sof
 ---
 ## O que a primeira entrega implementa
 
-Após o V5.9, o Guardian tem sete componentes identificados e um stage offline de seis componentes, mas os manifests eram apenas SHA256 *auto-declarados* — qualquer pessoa que alterasse um arquivo poderia recalcular o manifesto. O V6.0 implementa um **manifesto separado com assinatura digital Ed25519**, desde que a chave pública de verificação tenha sido entregue e confiada ao operador **por um canal independente**.
+Após o V5.9, o Guardian tem sete componentes identificados e um stage offline de seis componentes, mas os manifests eram apenas SHA256 *auto-declarados* — qualquer pessoa que alterasse um arquivo poderia recalcular o manifesto. O V6.0 implementa um **manifesto separado com assinatura digital Ed25519**, desde que a chave pública de verificação e seu **SHA-256 completo** tenham sido entregues e confiados ao operador **por um canal independente**.
 
 Dois scripts compõem a entrega:
 
 - `scripts/GuardianV60-SignPreparedBundle.mjs`: operação **MANUAL** sobre sete artefatos já capturados em uma pasta offline, com uma chave privada Ed25519 **criptografada PKCS#8** fora do bundle; a senha da chave é solicitada no terminal sem eco. Assina byte a byte o `manifest.json` e gera `manifest.sig` sem sobrescrever arquivos existentes. Não gera/captura os artefatos de produção, não abre Docker e não executa SQL.
-- `scripts/GuardianV60-SignedBundleTrust.mjs`: verifica assinatura destacada, exige chave pública confiável **fora do bundle**, bloqueia path traversal e symlink, confere o hash e o tamanho de **sete componentes** de dentro do pacote e o **oitavo componente — cofre de secrets — armazenado separadamente**. Não usa a senha do backup do banco. Não lê conteúdo SQL ou secrets para execução.
+- `scripts/GuardianV60-SignedBundleTrust.mjs`: verifica assinatura destacada, exige chave pública confiável **fora do bundle** e seu fingerprint completo de SHA-256 previamente confiado (`--expected-key-sha256`), bloqueia path traversal e symlink, confere o hash e o tamanho de **sete componentes** de dentro do pacote e o **oitavo componente — cofre de secrets — armazenado separadamente**. Não usa a senha do backup do banco. Não lê conteúdo SQL ou secrets para execução.
 
 ## Estrutura esperada para o bundle preparado
 
@@ -65,3 +65,6 @@ Dependências necessárias para avanço real: capturar globals do projeto origin
 As operações planejadas continuam: **Criar Backup · Testar Recuperação · Recuperar Sistema**, com backup MANUAL antes das atualizações, nunca cron automático de quatro horas. A produção, DNS e containers CLEAN6 permanecem fora do escopo dessas ferramentas.
 
 Referências: `docs/guardian-error-ledger-and-nonregression.md`, `docs/guardian-v59-sealed-recovery-and-completeness.md`.
+### Proteção anti-substituição da identidade de assinatura
+
+O verificador V6.0 exige agora `--expected-key-sha256` (SHA-256 do DER SPKI da chave pública) obtido **fora do pacote**. Ele não aceita apenas um `trusted-public.pem` que poderia ser substituído pelo mesmo invasor capaz de adulterar os arquivos. O teste de regressão tenta trocar a chave pública e força `TRUST_KEY_FINGERPRINT_MISMATCH`. Essa pinagem deve ser registrada em local independente do disco/arquivo que contém os backups; a chave privada é armazenada offline e criptografada. Nenhuma chave real foi criada ou compartilhada neste desenvolvimento.
