@@ -154,6 +154,7 @@ function deepReadPatchGate(image){
 async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlainSha,mode='toc'){
  if(!['toc','full'].includes(mode))fail('UNSAFE_RESTORE_MODE');
  const selectedImage=localDocker();
+ if(mode==='full')deepReadPatchGate(selectedImage);
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
  let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0,watchdog=null;
