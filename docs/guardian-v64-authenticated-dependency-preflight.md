@@ -32,3 +32,10 @@ Testes novos do V6.4 exercitam linhas sintéticas do `pg_restore --list`, identi
 4. Recuperar Web, API, Storage, DNS/config/secrets e cronometrar recuperação completa antes de declarar 4–6 horas comprovadas.
 
 Backups MANUAIS imediatamente antes das atualizações, sem rotina automática a cada quatro horas.
+## Correção de evidência real após execução local — V6.4.1
+
+Em nova execução do operador com o `.r62db` autêntico, o Guardian voltou a autenticar `AES_GCM_TAG_AUTHENTICATED=YES` e a listar 919 itens sem SQL. As novas métricas iniciais foram `DEPENDENCY_VISIBLE_OWNER_ROLES=7`, `DEPENDENCY_DISTINCT_EXTENSIONS=0`, `TOC_EXTENSION=6`, `DEPENDENCY_UNCLASSIFIED_TOC_ENTRIES=9` e `DEPENDENCY_AMBIGUOUS_TOC_OWNER_ENTRIES=12`. A saída é internamente suspeita: **não interpretar zero nomes como zero extensões**. A hipótese de parsing foi confirmada por inspeção do código: o matcher antigo exigia um proprietário após o nome da extensão. `pg_restore --list` pode emitir `EXTENSION - nome` sem campo proprietário e, pior, o nome da extensão acabava sendo incluído na contagem de owner candidates.
+
+O V6.4.1 separa `EXTENSION` antes de analisar proprietários, interpreta entrada com ou sem campo owner, e nunca considera o nome da extensão uma role. Os testes passaram a cobrir ambos os formatos e o ensaio de dump PostgreSQL sintético agora inclui `CREATE EXTENSION pgcrypto` e exige nome EXTENSION detectado no caminho AES-GCM + pg_restore --list. **A contagem original 7 roles candidatas não estava autenticada semanticamente como sete roles reais**; só um novo relatório corrigido poderá reestimar essa contagem, ainda sujeita a outros itens ambíguos.
+
+A falha anterior `BLOCKED_ERROR_REDACTED` foi seguida por uma autenticação bem-sucedida. Sem evidência adicional, não há atribuição conclusiva dessa falha a uma causa específica. Nenhum SQL ou dado de produção foi alterado pelos dois relatórios. Não é necessário fornecer dump em claro ou lista privada de nomes ao desenvolvedor.
