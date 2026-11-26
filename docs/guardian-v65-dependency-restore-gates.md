@@ -75,3 +75,16 @@ Integrated V6.6 into the authenticated in-memory V5.4 catalog reader, with count
 Crosschecks require known+other=V6.5 unknown and candidate+no-proof=V6.5 nonstandard; V5.5 accepts these only as an optional complete group with strict arithmetic validation. All names remain omitted.
 V5.4 PowerShell operator now requires **six pinned files**: V53, V54, V64, V65, V66, and the operator PS1. Do not reuse five-file V6.5 download command with newly integrated V6.6 files. V6.4.2/V6.5 previous pinned scripts remain reproducible.
 New synthetic PG17 integration assertions and corrupted safe-report tests added. **Real backup V6.6 not yet run; new commit-specific CI not yet approved.** No SQL, production modification, automated merge or installer rollout authorized.
+
+## Authenticated real archive V6.6 operator evidence — 2026-11-25
+User-provided sanitized local operator output on pinned six-file revision `3158d859b8283b91b40a5c5614cb8e966515054b`:
+- Three ciphertext copies, matching expected SHA-256; full AES-GCM authentication and local PG17 `pg_restore --list` succeeded.
+- Content fingerprint `EA995E37864FF769`, TOC items 919 (unchanged from V6.5), six extensions visible, 12 *owner-role candidate strings* (not verified globals).
+- Baseline: `SHAPE_RECOGNIZED_TYPES=910`, `SHAPE_UNRECOGNIZED_TYPES=9`, `SHAPE_NONSTANDARD_LAST_TOKENS=1`, `SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO`.
+- New V6.6 counters: `BLIND_KNOWN_PUBLIC_KIND_ITEMS=6`; `BLIND_OTHER_UNKNOWN_SHAPES=3`; `BLIND_NONSTANDARD_CANDIDATE_ITEMS=0`; `BLIND_NONSTANDARD_NO_PROOF_ITEMS=1`; `BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO`.
+- Reconciliations: 6 + 3 = 9 unrecognized; 0 + 1 = 1 anomalous tail; 910 + 9 = 919.
+- Historic `TOC_TABLE=77`, `EXPECTED_USER_TABLES_REFERENCE=76` requires scope comparison, cannot attribute +1 to a rogue table.
+- `PG_RESTORE_EXECUTED_SQL=NO`, `DATABASE_RESTORED=NO`, `ROLES_ACL_RESTORED=NO`, `PRODUCTION_TOUCHED=NO`, `RTO_4_TO_6_HOURS_PROVEN=NO`.
+- Independent GitHub Actions on this same commit: **34/34 SUCCESS**, zero failures, including networkless synthetic PG17 encrypted archive catalog, Windows operator and preflight Windows/Linux.
+
+**Risk gate:** 6 items are classifiable as known public PostgreSQL TOC kinds; they are NOT evidence that their contents or dependencies were validated. Three entries remain in unrecognized shapes; one anomalous tail is in a kind with no owner-proof semantics. A separate role/global/ACL inventory and isolated data restore remain mandatory. No plaintext, IDs, role names, object names or password have been committed here. Next diagnostic should expose only fixed public PostgreSQL kind labels and aggregated unknown-shape categories, in-memory, with negative privacy tests before reading the real archive.
