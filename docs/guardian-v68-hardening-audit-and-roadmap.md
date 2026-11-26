@@ -76,6 +76,10 @@ User confirmed admin access to the original TaxiRadar Supabase project and execu
 
 Operator executed read-only origin SQL Editor `pg_catalog.pg_extension` inventory: `pg_cron 1.6.4`, `pg_net 0.20.4`, `pg_stat_statements 1.11`, `pgcrypto 1.3`, `plpgsql 1.0`, `supabase_vault 0.3.2`, `uuid-ossp 1.1`. Origin currently has seven installed extensions. Previously inspected local image control files for six *different* candidates: pgcrypto/pg_cron/pg_net/pg_graphql/vector/postgis. Additional original live source extensions, especially supabase_vault, must be checked explicitly in the local image before a real restore. Do not presume all historical six archive EXTENSION entries equal the current seven; plpgsql may have different dump handling. No actual source globals export or historical roles confirmation yet.
 
+## V28 additional extension control-file parity — 2026-11-26
+
+Operator local V28 `STATUS=PASS` on PG17 image, `EXTENSIONS_CHECKED=4`: `pg_stat_statements` control default 1.11; `plpgsql` 1.0; `supabase_vault` 0.3.2; `uuid-ossp` 1.1. These correspond to the current origin V27 installed versions. Combined with origin-local parity for pgcrypto/pg_cron/pg_net, **all seven current origin extension version labels equal local image control defaults**. This does not prove loadable libraries, executable CREATE EXTENSION, SQL scripts, historical six EXTENSION entries, historical role definitions or real restore; none were executed. Avoid representing control-file parity as completed recovery. Next step: read-only origin role and membership catalog summary and explicit permission for secure current `--role-only` export. Current origin snapshot cannot be labelled original historical globals.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
