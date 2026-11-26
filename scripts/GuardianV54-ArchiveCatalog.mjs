@@ -321,6 +321,13 @@ export function renderSafeCatalogReport(result){
   'PAIR_REASON_OWNER_DATA='+result.toc.tableDataPairs.simpleDataOwnerMismatch,
   'PAIR_REASON_NONUNIQUE_TABLE='+result.toc.tableDataPairs.simpleNonuniqueTables,
   'PAIR_REASON_NONUNIQUE_DATA='+result.toc.tableDataPairs.simpleNonuniqueData,
+  'PAIR_OID_MATCHED='+result.toc.tableDataPairs.oidStructurallyMatched,
+  'PAIR_OID_TABLE_ONLY='+result.toc.tableDataPairs.oidTableOnly,
+  'PAIR_OID_DATA_ONLY='+result.toc.tableDataPairs.oidDataOnly,
+  'PAIR_OID_DUPLICATE_TABLE='+result.toc.tableDataPairs.oidDuplicateTable,
+  'PAIR_OID_DUPLICATE_DATA='+result.toc.tableDataPairs.oidDuplicateData,
+  'PAIR_OID_INVALID_TABLE='+result.toc.tableDataPairs.oidInvalidTable,
+  'PAIR_OID_INVALID_DATA='+result.toc.tableDataPairs.oidInvalidData,
   'PAIR_ROWS_VERIFIED=NO'];
  if(result.deepRead){
   lines.push('DEEP_FULL_ARCHIVE_READ=PASS');
