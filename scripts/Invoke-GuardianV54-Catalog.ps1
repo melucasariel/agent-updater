@@ -21,7 +21,8 @@ try{
  $shape=Join-Path $PSScriptRoot 'GuardianV65-TocShapeRiskAudit.mjs'
  $blind=Join-Path $PSScriptRoot 'GuardianV66-TocBlindSpotAudit.mjs'
  $scope=Join-Path $PSScriptRoot 'GuardianV67-TableScopeAudit.mjs'
- if(-not (Test-Path -LiteralPath $js -PathType Leaf) -or -not (Test-Path -LiteralPath $auth -PathType Leaf) -or -not (Test-Path -LiteralPath $deps -PathType Leaf) -or -not (Test-Path -LiteralPath $shape -PathType Leaf) -or -not (Test-Path -LiteralPath $blind -PathType Leaf) -or -not (Test-Path -LiteralPath $scope -PathType Leaf)){throw 'SOURCES_MISSING'}
+ $pairs=Join-Path $PSScriptRoot 'GuardianV68-TableDataPairAudit.mjs'
+ if(-not (Test-Path -LiteralPath $js -PathType Leaf) -or -not (Test-Path -LiteralPath $auth -PathType Leaf) -or -not (Test-Path -LiteralPath $deps -PathType Leaf) -or -not (Test-Path -LiteralPath $shape -PathType Leaf) -or -not (Test-Path -LiteralPath $blind -PathType Leaf) -or -not (Test-Path -LiteralPath $scope -PathType Leaf) -or -not (Test-Path -LiteralPath $pairs -PathType Leaf)){throw 'SOURCES_MISSING'}
  & node --check $js 2>$null | Out-Null
  if($LASTEXITCODE -ne 0){throw 'SOURCE_PARSE_FAILED'}
  & node --check $deps 2>$null | Out-Null
@@ -32,6 +33,8 @@ try{
  if($LASTEXITCODE -ne 0){throw 'BLIND_AUDIT_PARSE_FAILED'}
  & node --check $scope 2>$null | Out-Null
  if($LASTEXITCODE -ne 0){throw 'SCOPE_AUDIT_PARSE_FAILED'}
+ & node --check $pairs 2>$null | Out-Null
+ if($LASTEXITCODE -ne 0){throw 'PAIR_AUDIT_PARSE_FAILED'}
  $found=New-Object 'System.Collections.Generic.List[string]'
  $seen=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
  $checked=0
