@@ -139,6 +139,14 @@ function ciphertextHash(file){
   stream.on('end',()=>resolve(h.digest('hex')));
  });
 }
+export function decodeTocUtf8Chunks(chunks){
+ if(!Array.isArray(chunks)||chunks.some(c=>!Buffer.isBuffer(c)))
+  fail('TOC_ENCODING_SOURCE_INVALID');
+ const total=chunks.reduce((sum,c)=>sum+c.length,0);
+ if(total>8*1024*1024)fail('TOC_OUTPUT_TOO_LARGE');
+ try{return new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks,total));}
+ catch{fail('TOC_TEXT_ENCODING_INVALID');}
+}
 export function verifyPg17PatchVersion(version){
  const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)(?: \((?:Debian|Ubuntu) [A-Za-z0-9.+:~_-]{1,96}\))?$/.exec((version||'').trim());
  if(!m||Number(m[1])<12)fail('PG17_PATCH_LEVEL_BLOCKED');
@@ -219,9 +227,7 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
      await ciphertextHash(file)!==expectedCipherSha)
     fail('CIPHERTEXT_CHANGED_BETWEEN_PASSES');
   if(mode==='full')return {fullRead:true,sqlExecuted:false,rowsValidated:false};
-  try{
-   stdout=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(stdoutChunks,stdoutBytes));
-  }catch{fail('TOC_TEXT_ENCODING_INVALID');}
+  stdout=decodeTocUtf8Chunks(stdoutChunks);
   const catalog=classifyTOC(stdout);
   const dependencySummary=inspectToc(stdout);
   const shapeAudit=auditTocShape(stdout);
