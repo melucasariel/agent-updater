@@ -16,6 +16,7 @@ import {inspectToc} from './GuardianV64-TocDependencyPreflight.mjs';
 import {auditTocShape} from './GuardianV65-TocShapeRiskAudit.mjs';
 import {auditTocBlindSpots} from './GuardianV66-TocBlindSpotAudit.mjs';
 import {auditTableScope} from './GuardianV67-TableScopeAudit.mjs';
+import {auditTocTableDataPairs} from './GuardianV68-TableDataPairAudit.mjs';
 
 const fail=x=>{throw Error(x)};
 const MAGIC=Buffer.from('R62DB02\n','ascii');
@@ -178,9 +179,17 @@ async function catalogFromEncrypted(file,passwd){
   const shapeAudit=auditTocShape(stdout);
   const blindSpotAudit=auditTocBlindSpots(stdout);
   const tableScopeAudit=auditTableScope(stdout);
+  const tableDataPairs=auditTocTableDataPairs(stdout);
   if(catalog.items!==dependencySummary.entries||catalog.items!==shapeAudit.entries||
     catalog.items!==blindSpotAudit.entries||
     catalog.items!==tableScopeAudit.catalogItems||
+    catalog.items!==tableDataPairs.entries||
+    (catalog.counts.TABLE||0)!==tableDataPairs.tableEntries||
+    (catalog.counts.TABLE_DATA||0)!==tableDataPairs.dataEntries||
+    tableDataPairs.structurallyPaired+tableDataPairs.unpairedSimpleTableEntries+
+    tableDataPairs.ambiguousTableEntries!==tableDataPairs.tableEntries||
+    tableDataPairs.structurallyPaired+tableDataPairs.unpairedSimpleDataEntries+
+    tableDataPairs.ambiguousDataEntries!==tableDataPairs.dataEntries||
     (catalog.counts.TABLE||0)!==tableScopeAudit.tableEntries||
     (catalog.counts.TABLE_DATA||0)!==tableScopeAudit.tableDataEntries||
     tableScopeAudit.publicSchemaTableEntries+
@@ -191,7 +200,7 @@ async function catalogFromEncrypted(file,passwd){
     shapeAudit.unrecognizedTypes!==blindSpotAudit.v65Unrecognized||
     shapeAudit.nonstandardLastTokens!==blindSpotAudit.v65NonstandardLastTokens)
     fail('TOC_AUDIT_COUNTER_INCONSISTENT');
-  return {...catalog,dependencySummary,shapeAudit,blindSpotAudit,tableScopeAudit};
+  return {...catalog,dependencySummary,shapeAudit,blindSpotAudit,tableScopeAudit,tableDataPairs};
  }finally{
   key.fill(0);
   if(child&&!child.killed&&child.exitCode===null)child.kill();
@@ -236,7 +245,14 @@ export async function main(argv){
   'SCOPE_OTHER_SIMPLE_SCHEMA_TABLES='+result.toc.tableScopeAudit.otherSimpleSchemaTableEntries,
   'SCOPE_NO_SCHEMA_TABLES='+result.toc.tableScopeAudit.noSchemaTableEntries,
   'SCOPE_COMPLEX_SCHEMA_TABLES='+result.toc.tableScopeAudit.complexOrAmbiguousSchemaTableEntries,
-  'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO'];
+  'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO',
+  'PAIR_STRUCTURALLY_MATCHED='+result.toc.tableDataPairs.structurallyPaired,
+  'PAIR_UNPAIRED_SIMPLE_TABLE='+result.toc.tableDataPairs.unpairedSimpleTableEntries,
+  'PAIR_UNPAIRED_SIMPLE_DATA='+result.toc.tableDataPairs.unpairedSimpleDataEntries,
+  'PAIR_AMBIGUOUS_TABLE='+result.toc.tableDataPairs.ambiguousTableEntries,
+  'PAIR_AMBIGUOUS_DATA='+result.toc.tableDataPairs.ambiguousDataEntries,
+  'PAIR_DUPLICATE_NONUNIQUE='+result.toc.tableDataPairs.duplicateOrNonUniqueEntries,
+  'PAIR_ROWS_VERIFIED=NO'];
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
