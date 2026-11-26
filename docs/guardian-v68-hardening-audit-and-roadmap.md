@@ -37,6 +37,13 @@
 6. **Separate app/service recovery:** Rehydrate Storage file bodies and metadata, Edge Functions, frontend/Cloudflare, environment variables and encrypted secrets from separately governed offline references. Test push (VAPID), PIX workflow and two-role driver dispatch in staging with test endpoints only.
 7. **RTO drill and UX gates:** Time the cold-start end-to-end recovery and establish real RTO/RPO evidence. Only after tests prove reproducible recovery should the interface expose the three requested actions (Criar Backup, Testar Recuperação, Recuperar Sistema) with explicit confirmations, owner-only permissions, protected logs and rollback.
 
+
+## Operator-reported isolated PG17 synthetic recovery — 2026-11-26
+
+The operator supplied an offline diagnostic report for the **local** V13 PowerShell laboratory (not a CI attestation): `STATUS=PASS`, `ISOLATION_VERIFIED=YES`, `DIRECT_INITDB_COMPLETED=YES`, `POSTGRES_READY=YES`, `SYNTHETIC_RESTORE=YES`, `DATA_VERIFIED=YES`, `RLS_POLICY_VERIFIED=YES`, `MUTATION_DETECTED=YES`, and `TEMP_CONTAINER_CLEANED=YES`. The disposable image was PostgreSQL 17.12+ with a resolved `postgres` UID/GID, 512 MiB `/dev/shm`, 1 GiB container memory, read-only filesystem with tmpfs, no network, and no published ports. The successful path explicitly ran `initdb` then `postgres`; the image-specific entrypoint previously exited before readiness. The specific entrypoint defect is **not** proven. No real archive or production database was used.
+
+This is evidence that the user's machine can carry out a small synthetic dump/restore, including one RLS policy and a changed-value detection. **Not** evidence of authenticated real-backup restore, historical roles, ACL fidelity, extension availability, all-table row integrity, Cloudflare/Storage/Secrets recovery, or measured RTO. Preserve the historical-global-role and extension compatibility gates before real SQL. Future local operator scripts must keep single-paste PowerShell execution, sanitized diagnostics automatically copied using `Set-Clipboard`, and identity-verified cleanup.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
