@@ -18,6 +18,18 @@ const lines=[begin,'CIPHERTEXT_SHA256_MATCH=YES','AES_GCM_TAG_AUTHENTICATED=YES'
  'ARCHIVE_PLAINTEXT_FILE_WRITTEN=NO','PRODUCTION_TOUCHED=NO',
  'RTO_4_TO_6_HOURS_PROVEN=NO','END_REPORT_OK'];
 const good=lines.join('\n')+'\n';
+const extra=[
+ 'DEPENDENCY_VISIBLE_OWNER_ROLES=5',
+ 'DEPENDENCY_DISTINCT_EXTENSIONS=6',
+ 'DEPENDENCY_UNCLASSIFIED_TOC_ENTRIES=13',
+ 'DEPENDENCY_AMBIGUOUS_TOC_OWNER_ENTRIES=0',
+ 'DEPENDENCY_SHA16=EA995E37864FF769',
+ 'DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO'
+];
+const enhanced=good.replace('END_REPORT_OK',extra.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(enhanced).items,919);
+assert.equal(parseSafeReport(good).items,919);
+assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO','DEPENDENCY_ROLE_GRANTEES_COMPLETE=YES')),e=>e.message==='REPORT_LIMIT_MISSING');
 const p=parseSafeReport(good);
 assert.equal(p.items,919);
 assert.equal(p.counts.TABLE,77);
