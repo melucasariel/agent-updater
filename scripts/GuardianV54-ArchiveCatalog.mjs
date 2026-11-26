@@ -159,6 +159,7 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
  let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0,watchdog=null;
  let stderrObserved=false,timedOut=false;
+ const stdoutChunks=[];let stdoutBytes=0;
  const ownedName='r62-guardian-read-'+crypto.randomBytes(8).toString('hex');
  const ownership=crypto.randomBytes(16).toString('hex');
  const secondPlainHash=crypto.createHash('sha256');
@@ -176,10 +177,13 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
    child.on('error',()=>resolve(-1));
    child.on('close',code=>resolve(code??-1));
   });
-  child.stdout.on('data',x=>{
+  child.stdout.on('data',buf=>{
    if(mode==='full'){badOutput=true;return;}
-   if(stdout.length+x.length>8*1024*1024)badOutput=true;
-   else stdout+=x.toString('utf8');
+   // Decode only after all chunks: otherwise UTF-8 codepoints split at a
+   // pipe boundary get U+FFFD and can silently corrupt object identity.
+   stdoutBytes+=buf.length;
+   if(stdoutBytes>8*1024*1024)badOutput=true;
+   else stdoutChunks.push(buf);
   });
   child.stderr.on('data',()=>{stderrObserved=true;}); // Count only; never expose object names or raw warnings.
   child.stdin.on('error',()=>{}); // pg_restore may stop reading after TOC; ciphertext still authenticated separately.
@@ -215,6 +219,9 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
      await ciphertextHash(file)!==expectedCipherSha)
     fail('CIPHERTEXT_CHANGED_BETWEEN_PASSES');
   if(mode==='full')return {fullRead:true,sqlExecuted:false,rowsValidated:false};
+  try{
+   stdout=new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(stdoutChunks,stdoutBytes));
+  }catch{fail('TOC_TEXT_ENCODING_INVALID');}
   const catalog=classifyTOC(stdout);
   const dependencySummary=inspectToc(stdout);
   const shapeAudit=auditTocShape(stdout);
