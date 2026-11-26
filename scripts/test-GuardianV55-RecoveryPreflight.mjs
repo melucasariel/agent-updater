@@ -58,6 +58,22 @@ const scope=[
 ];
 const v67=v66.replace('END_REPORT_OK',scope.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v67).items,919);
+const pairs=[
+ 'PAIR_STRUCTURALLY_MATCHED=70',
+ 'PAIR_UNPAIRED_SIMPLE_TABLE=6',
+ 'PAIR_UNPAIRED_SIMPLE_DATA=1',
+ 'PAIR_AMBIGUOUS_TABLE=1',
+ 'PAIR_AMBIGUOUS_DATA=2',
+ 'PAIR_DUPLICATE_NONUNIQUE=0',
+ 'PAIR_ROWS_VERIFIED=NO'
+];
+const v68=v67.replace('END_REPORT_OK',pairs.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v68).items,919);
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_STRUCTURALLY_MATCHED=70','PAIR_STRUCTURALLY_MATCHED=69')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_ROWS_VERIFIED=NO','PAIR_ROWS_VERIFIED=YES')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_AMBIGUOUS_DATA=2\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_DUPLICATE_NONUNIQUE=0','PAIR_DUPLICATE_NONUNIQUE=999')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+
 assert.throws(()=>parseSafeReport(v67.replace('SCOPE_PUBLIC_SCHEMA_TABLES=70','SCOPE_PUBLIC_SCHEMA_TABLES=69')),e=>e.message==='SCOPE_COUNTER_INCONSISTENT');
 assert.throws(()=>parseSafeReport(v67.replace('SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO','SCOPE_ORIGINAL_USER_TABLES_VALIDATED=YES')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v67.replace('SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=6\n','')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
@@ -95,6 +111,7 @@ const bad=[
  [invalid(good,'TOC_TABLE=77','TOC_TABLE=78'),'TOC_TOTAL_INCONSISTENT']
 ];
 for(const [txt,code] of bad)assert.throws(()=>parseSafeReport(txt),e=>e.message===code,'Expected '+code);
+console.log('V68_PAIR_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V67_SCOPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V66_BLIND_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V65_SHAPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
