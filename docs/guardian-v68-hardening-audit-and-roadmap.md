@@ -52,6 +52,10 @@ The operator supplied local offline V18 report: `STATUS=PASS`, `EXTENSION_DIRECT
 
 Local V19 operator diagnostic: `STATUS=PASS`, six control files read on preloaded PostgreSQL 17 image, defaults: `pgcrypto=1.3`, `pg_cron=1.6.4`, `pg_net=0.20.4`, `pg_graphql=1.6.3`, `vector=0.8.2`, `postgis=3.3.7`. These are **local control-file default versions only**. No extension creation, SQL library load, backup content, historical version comparison, or global roles verification occurred. Next offline gate: locate matching versioned installation scripts and library artifacts, then obtain independent historical extension and globals evidence before real restore.
 
+## Operator-reported extension installation artifact check — 2026-11-26
+
+V20 reported `STATUS=PASS` for six local extension artifact checks on the image. Direct `name--default_version.sql` file found for `pgcrypto`, `pg_net`, `pg_graphql`, `vector`, `postgis`; **not found** for `pg_cron--1.6.4.sql` although the corresponding control file reported `default_version=1.6.4`. This is an *unresolved installation path* (may require a base-version script plus an update chain), **not** evidence of irreparable extension or actual CREATE EXTENSION failure. No SQL executed, no restore, no historical globals or version comparison. Next: enumerate only versioned `pg_cron` SQL artifact filenames, verify reachable update graph offline, then check library dependencies and historical origin.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
