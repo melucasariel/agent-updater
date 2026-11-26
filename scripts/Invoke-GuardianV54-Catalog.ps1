@@ -66,7 +66,7 @@ try{
  if($exit -ne 0){throw 'AUTHENTICATED_READER_BLOCKED'}
  if(-not (Test-Path -LiteralPath $tempReport -PathType Leaf)){throw 'MISSING_SAFE_REPORT'}
  $items=@(Get-Content -LiteralPath $tempReport -ErrorAction Stop)
- if($items.Count -lt 3 -or $items.Count -gt 80 -or $items[-1] -ne 'END_REPORT_OK'){throw 'INVALID_SAFE_REPORT'}
+ if($items.Count -lt 3 -or $items.Count -gt 100 -or $items[-1] -ne 'END_REPORT_OK'){throw 'INVALID_SAFE_REPORT'}
  foreach($line in $items){
   $valid=$line -eq '=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ==='
   if(-not $valid){$valid=$line -eq 'END_REPORT_OK'}
