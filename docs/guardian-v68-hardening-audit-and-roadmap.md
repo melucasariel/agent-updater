@@ -112,6 +112,10 @@ Operator read-only V35 reports 32 visible roles, 24 referenced (up from 21 on li
 
 Operator V36 `STATUS=BLOCKED`, `LAST_STAGE=VALIDATE_JSON`, `FAILURE_CLASS=SNAPSHOT_VALIDATION`, `JSON_VALIDATED=NO`, zero roles/memberships counted and no DPAPI file. This is a **format/validation failure** not evidence that the source catalog or SQL returned zero roles. Possible sources include SQL Editor copy mode wrapping `snapshot_json` inside a row/array or quoted JSON string; also possible role/membership validation mismatch. Next importer should accept exact object, wrapped `snapshot_json` row, or JSON string and report tightly bounded failure enum, never echo role identities, attributes, copied JSON, or credentials. Do not rerun dump unnecessarily. Preserve V30 output and no production/CLEAN6 changes.
 
+## V37 password-free live roles and membership catalog protected — 2026-11-26
+
+Operator local Windows import V37 `STATUS=PASS`: Supabase SQL Editor V36 snapshot was copied as a single-element JSON array wrapper; importer unwrapped it, validated 32 distinct role names and 25 membership records matching V35, DPAPI protect/unprotect roundtrip verified and encrypted artifact created under user account. No plaintext file created by import script and no role names or hashes echoed. This is current live-origin catalog **not** the historical `.r62db` globals, and DPAPI encryption is not portable. V30 Supabase CLI `--role-only` SQL artifact remains separately encrypted and appears to contain only three regex-detected ALTER ROLE commands; verify its role coverage against the V37 catalog before trusting it. Next: offline in-memory comparative provenance and coverage gates, then reconstruct/obtain historically grounded globals before any real restoration. Neither live database nor CLEAN6 has been modified.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
