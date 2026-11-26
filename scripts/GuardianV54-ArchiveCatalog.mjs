@@ -15,6 +15,7 @@ import {authenticate} from './GuardianV53-AuthenticateR62DB.mjs';
 import {inspectToc} from './GuardianV64-TocDependencyPreflight.mjs';
 import {auditTocShape} from './GuardianV65-TocShapeRiskAudit.mjs';
 import {auditTocBlindSpots} from './GuardianV66-TocBlindSpotAudit.mjs';
+import {auditTableScope} from './GuardianV67-TableScopeAudit.mjs';
 
 const fail=x=>{throw Error(x)};
 const MAGIC=Buffer.from('R62DB02\n','ascii');
@@ -176,13 +177,21 @@ async function catalogFromEncrypted(file,passwd){
   const dependencySummary=inspectToc(stdout);
   const shapeAudit=auditTocShape(stdout);
   const blindSpotAudit=auditTocBlindSpots(stdout);
+  const tableScopeAudit=auditTableScope(stdout);
   if(catalog.items!==dependencySummary.entries||catalog.items!==shapeAudit.entries||
     catalog.items!==blindSpotAudit.entries||
+    catalog.items!==tableScopeAudit.catalogItems||
+    (catalog.counts.TABLE||0)!==tableScopeAudit.tableEntries||
+    (catalog.counts.TABLE_DATA||0)!==tableScopeAudit.tableDataEntries||
+    tableScopeAudit.publicSchemaTableEntries+
+    tableScopeAudit.otherSimpleSchemaTableEntries+
+    tableScopeAudit.noSchemaTableEntries+
+    tableScopeAudit.complexOrAmbiguousSchemaTableEntries!==tableScopeAudit.tableEntries||
     catalog.counts.EXTENSION!==shapeAudit.extensionEntries||
     shapeAudit.unrecognizedTypes!==blindSpotAudit.v65Unrecognized||
     shapeAudit.nonstandardLastTokens!==blindSpotAudit.v65NonstandardLastTokens)
     fail('TOC_AUDIT_COUNTER_INCONSISTENT');
-  return {...catalog,dependencySummary,shapeAudit,blindSpotAudit};
+  return {...catalog,dependencySummary,shapeAudit,blindSpotAudit,tableScopeAudit};
  }finally{
   key.fill(0);
   if(child&&!child.killed&&child.exitCode===null)child.kill();
@@ -222,7 +231,12 @@ export async function main(argv){
   'BLIND_OTHER_UNKNOWN_SHAPES='+result.toc.blindSpotAudit.otherUnknownShapes,
   'BLIND_NONSTANDARD_CANDIDATE_ITEMS='+result.toc.blindSpotAudit.nonstandardInCandidateOnlyTypes,
   'BLIND_NONSTANDARD_NO_PROOF_ITEMS='+result.toc.blindSpotAudit.nonstandardInNoOwnerProofTypes,
-  'BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'];
+  'BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO',
+  'SCOPE_PUBLIC_SCHEMA_TABLES='+result.toc.tableScopeAudit.publicSchemaTableEntries,
+  'SCOPE_OTHER_SIMPLE_SCHEMA_TABLES='+result.toc.tableScopeAudit.otherSimpleSchemaTableEntries,
+  'SCOPE_NO_SCHEMA_TABLES='+result.toc.tableScopeAudit.noSchemaTableEntries,
+  'SCOPE_COMPLEX_SCHEMA_TABLES='+result.toc.tableScopeAudit.complexOrAmbiguousSchemaTableEntries,
+  'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO'];
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
