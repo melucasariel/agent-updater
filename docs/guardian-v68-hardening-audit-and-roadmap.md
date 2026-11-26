@@ -44,6 +44,10 @@ The operator supplied an offline diagnostic report for the **local** V13 PowerSh
 
 This is evidence that the user's machine can carry out a small synthetic dump/restore, including one RLS policy and a changed-value detection. **Not** evidence of authenticated real-backup restore, historical roles, ACL fidelity, extension availability, all-table row integrity, Cloudflare/Storage/Secrets recovery, or measured RTO. Preserve the historical-global-role and extension compatibility gates before real SQL. Future local operator scripts must keep single-paste PowerShell execution, sanitized diagnostics automatically copied using `Set-Clipboard`, and identity-verified cleanup.
 
+## Operator-reported PG17 extension control-file availability — 2026-11-26
+
+The operator supplied local offline V18 report: `STATUS=PASS`, `EXTENSION_DIRECTORY=FOUND`, `EXTENSIONS_CHECKED=6`; control files for `pgcrypto`, `pg_cron`, `pg_net`, `pg_graphql`, `vector`, and `postgis` all reported `YES` on a locally available PostgreSQL 17 image. This is **control-file presence only**, not proof of installed SQL definitions, library loadability, dependencies, restore compatibility, historical extension version matching, or production recovery. The probe used no SQL/server, backup data, image download, production or CLEAN6. Next gates: query local extension control default versions plus available migration scripts without sharing paths; obtain historical extension versions/roles from authorized historical artifacts before real restore. 
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
