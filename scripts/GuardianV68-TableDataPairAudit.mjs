@@ -3,12 +3,12 @@
 // Only fixed counters leave this function. No names, IDs, schemas, owners or hashes leave.
 import {auditTocShape} from './GuardianV65-TocShapeRiskAudit.mjs';
 const SIMPLE=/^([A-Za-z_][A-Za-z_0-9$]{0,127}) ([A-Za-z_][A-Za-z_0-9$]{0,127}) (?:-|[A-Za-z_][A-Za-z_0-9$-]{0,127})$/;
-const MARK=/^\\s*\\d+;\\s+\\d+\\s+\\d+\\s+(.+)$/;
+const MARK=/^\s*\d+;\s+\d+\s+\d+\s+(.+)$/;
 export function auditTocTableDataPairs(toc){
  const base=auditTocShape(toc);
  const tables=new Map(),data=new Map();
  let tableEntries=0,dataEntries=0,ambiguousTables=0,ambiguousData=0;
- for(const line of toc.split(/\\r?\\n/)){
+ for(const line of toc.split(/\r?\n/)){
   const m=MARK.exec(line);
   if(!m)continue;
   const payload=m[1].trimEnd();
@@ -19,7 +19,7 @@ export function auditTocTableDataPairs(toc){
   const id=SIMPLE.exec(rest);
   if(!id){if(kind==='table')ambiguousTables++;else ambiguousData++;continue;}
   // This key is never exposed; discard when audit returns. Ignore owner strings.
-  const key=id[1]+'\\u0000'+id[2];
+  const key=id[1]+'\u0000'+id[2];
   const map=kind==='table'?tables:data;
   map.set(key,(map.get(key)||0)+1);
  }
