@@ -3,11 +3,15 @@ on:
   push:
     paths:
       - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   pull_request:
     paths:
       - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   workflow_dispatch:
@@ -42,6 +46,8 @@ jobs:
           # but no role owner token in PG17's custom archive TOC.
           docker run --rm -i --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint pg_restore postgres:17-alpine --list < "$root/synthetic.dump" > "$root/toc"
           node scripts/test-GuardianV64-TocDependencyPreflight.mjs
+          node --check scripts/GuardianV65-TocShapeRiskAudit.mjs
+          node scripts/test-GuardianV65-TocShapeRiskAudit.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
