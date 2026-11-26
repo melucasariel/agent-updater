@@ -107,7 +107,7 @@ try{
  assert.ok(safe.includes('PAIR_REASON_TABLE_QUOTED='));
  assert.ok(safe.includes('PAIR_REASON_OWNER_TABLE='));
  assert.ok(safe.includes('PAIR_REASON_NONUNIQUE_DATA='));
- assert.throws(()=>parseSafeReport(safe.replace(/PAIR_REASON_TABLE_QUOTED=\\d+/,'PAIR_REASON_TABLE_QUOTED=999')),
+ assert.throws(()=>parseSafeReport(safe.replace(/PAIR_REASON_TABLE_QUOTED=\d+/,'PAIR_REASON_TABLE_QUOTED=999')),
   e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
 
  assert.ok(safe.endsWith('END_REPORT_OK'));
