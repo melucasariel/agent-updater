@@ -4,12 +4,13 @@
 param(
  [string]$ExpectedSha256='35FCCCD54DB5D42729EFF95227133D0875D6FC7F730C881BA486F87F46F038EA',
  [string[]]$SearchRoots=@($env:TEMP,(Join-Path $env:USERPROFILE 'Downloads'),(Join-Path $env:USERPROFILE 'Documents'),(Join-Path $env:USERPROFILE 'Desktop')),
+ [switch]$DeepRead,
  [switch]$NoClipboard
 )
 $ErrorActionPreference='Stop'
 $report=New-Object 'System.Collections.Generic.List[string]'
 $report.Add('=== ROTA62 GUARDIAN V5.4 OFFLINE CATALOG OPERATOR ===')
-$report.Add('MODE=LOCAL_ENCRYPTED_BACKUP_TOC_ONLY')
+$report.Add($(if($DeepRead){'MODE=LOCAL_ENCRYPTED_BACKUP_TOC_AND_FULL_PAYLOAD'}else{'MODE=LOCAL_ENCRYPTED_BACKUP_TOC_ONLY'}))
 $tempReport=$null
 try{
  if($ExpectedSha256 -notmatch '^[0-9A-Fa-f]{64}$'){throw 'INVALID_SHA'}
@@ -56,7 +57,11 @@ try{
  $tempReport=Join-Path $env:TEMP ('R62-V54-TOC-'+[guid]::NewGuid().ToString('N')+'.txt')
  $report.Add('PASSWORD_SOURCE=INTERACTIVE_LOCAL_TERMINAL')
  # Do not pipe or capture Node: interactive TTY is needed for hidden password.
- & node $js --archive $found[0] --expected-sha256 $ExpectedSha256 --report-file $tempReport
+ if($DeepRead){
+  & node $js --archive $found[0] --expected-sha256 $ExpectedSha256 --report-file $tempReport --deep-read
+ }else{
+  & node $js --archive $found[0] --expected-sha256 $ExpectedSha256 --report-file $tempReport
+ }
  $exit=$LASTEXITCODE
  if(-not (Test-Path -LiteralPath $tempReport -PathType Leaf)){throw 'MISSING_SAFE_REPORT'}
  $items=@(Get-Content -LiteralPath $tempReport -ErrorAction Stop)
