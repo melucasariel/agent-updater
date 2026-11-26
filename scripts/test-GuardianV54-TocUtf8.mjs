@@ -33,7 +33,7 @@ const inventory=[
  {Repository:'supabase/postgres',Tag:'17.12.1.001'},
  {Repository:'other/forbidden',Tag:'17'},
  {Repository:'postgres',Tag:'<none>'}
-].map(x=>JSON.stringify(x)).join('\\n');
+].map(x=>JSON.stringify(x)).join('\n');
 assert.deepEqual(localPostgresImageCandidates(inventory),[
  'postgres:17.12','supabase/postgres:17.12.1.001'
 ]);
