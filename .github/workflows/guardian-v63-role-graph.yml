@@ -1,0 +1,35 @@
+name: Guardian V6.3 current role graph and default ACL validation
+on:
+  push:
+    paths:
+      - scripts/GuardianV63-CurrentRoleGraph.mjs
+      - scripts/test-GuardianV63-CurrentRoleGraph.mjs
+      - .github/workflows/guardian-v63-role-graph.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV63-CurrentRoleGraph.mjs
+      - scripts/test-GuardianV63-CurrentRoleGraph.mjs
+      - .github/workflows/guardian-v63-role-graph.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-fail-closed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate role memberships owners and default privileges without SQL
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV63-CurrentRoleGraph.mjs
+          if($LASTEXITCODE -ne 0){throw 'Parser failure'}
+          node scripts/test-GuardianV63-CurrentRoleGraph.mjs
+          if($LASTEXITCODE -ne 0){throw 'Role graph regression failed'}
+          $blocked=@(node scripts/GuardianV63-CurrentRoleGraph.mjs --wrong x)
+          if($LASTEXITCODE -ne 2 -or ($blocked -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unsafe CLI'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V63_NO_SQL_OR_PRODUCTION_ACCESS=PASS'
