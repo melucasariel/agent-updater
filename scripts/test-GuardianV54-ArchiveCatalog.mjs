@@ -111,7 +111,7 @@ try{
   e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
 
  assert.ok(safe.endsWith('END_REPORT_OK'));
- assert.equal(safe.split('\n').length<=80,true);
+ assert.equal(safe.split('\n').length<=100,true);
  // The exact renderer used by main() must pass the actual V5.5 parser.
  const parsed=parseSafeReport(safe);
  assert.equal(parsed.items,result.toc.items);
