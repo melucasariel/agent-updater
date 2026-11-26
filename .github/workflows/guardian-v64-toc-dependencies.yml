@@ -1,0 +1,35 @@
+name: Guardian V6.4 PostgreSQL archive owner extension preflight
+on:
+  push:
+    paths:
+      - scripts/GuardianV64-TocDependencyPreflight.mjs
+      - scripts/test-GuardianV64-TocDependencyPreflight.mjs
+      - .github/workflows/guardian-v64-toc-dependencies.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV64-TocDependencyPreflight.mjs
+      - scripts/test-GuardianV64-TocDependencyPreflight.mjs
+      - .github/workflows/guardian-v64-toc-dependencies.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-synthetic:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Owner role and extension dependency parsing, missing current-roster and malicious input rejection
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV64-TocDependencyPreflight.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failure'}
+          node scripts/test-GuardianV64-TocDependencyPreflight.mjs
+          if($LASTEXITCODE -ne 0){throw 'Offline synthetic TOC test failed'}
+          $blocked=@(node scripts/GuardianV64-TocDependencyPreflight.mjs --unsafe)
+          if($LASTEXITCODE -ne 2 -or ($blocked -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unsafe CLI not blocked'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V64_NO_ARCHIVE_OR_SQL_USED=PASS'
