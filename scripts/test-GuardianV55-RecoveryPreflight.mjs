@@ -30,6 +30,20 @@ const enhanced=good.replace('END_REPORT_OK',extra.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(enhanced).items,919);
 assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_DISTINCT_EXTENSIONS=6','DEPENDENCY_DISTINCT_EXTENSIONS=999')),e=>e.message==='DEPENDENCY_COUNTER_INCONSISTENT');
 assert.equal(parseSafeReport(good).items,919);
+const shape=[
+ 'SHAPE_RECOGNIZED_TYPES=910',
+ 'SHAPE_UNRECOGNIZED_TYPES=9',
+ 'SHAPE_NO_OWNER_PROOF_ITEMS=600',
+ 'SHAPE_OWNER_CANDIDATE_ONLY_ITEMS=310',
+ 'SHAPE_NONSTANDARD_LAST_TOKENS=1',
+ 'SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'
+];
+const v65=enhanced.replace('END_REPORT_OK',shape.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v65).items,919);
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_RECOGNIZED_TYPES=910','SHAPE_RECOGNIZED_TYPES=911')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_NO_OWNER_PROOF_ITEMS=600','SHAPE_NO_OWNER_PROOF_ITEMS=601')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='SHAPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_NONSTANDARD_LAST_TOKENS=1\n','')),e=>e.message==='SHAPE_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO','DEPENDENCY_ROLE_GRANTEES_COMPLETE=YES')),e=>e.message==='REPORT_LIMIT_MISSING');
 const p=parseSafeReport(good);
 assert.equal(p.items,919);
@@ -56,6 +70,7 @@ const bad=[
  [invalid(good,'TOC_TABLE=77','TOC_TABLE=78'),'TOC_TOTAL_INCONSISTENT']
 ];
 for(const [txt,code] of bad)assert.throws(()=>parseSafeReport(txt),e=>e.message===code,'Expected '+code);
+console.log('V65_SHAPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
 console.log('V55_AUTHENTICATED_REPORT_STRICT_PARSE=PASS');
 console.log('V55_TABLE_SCOPE_77_VS_76_REQUIRES_REVIEW=PASS');
 console.log('V55_UNCLASSIFIED_ROLES_ACL_TRIGGER_REQUIRE_GATES=PASS');
