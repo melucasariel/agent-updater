@@ -56,10 +56,6 @@ jobs:
           node scripts/test-GuardianV64-TocDependencyPreflight.mjs
           node --check scripts/GuardianV65-TocShapeRiskAudit.mjs
           node scripts/test-GuardianV65-TocShapeRiskAudit.mjs
-          node --check scripts/GuardianV67-TableScopeAudit.mjs
-          if($LASTEXITCODE -ne 0){throw 'V67 Node parser failed'}
-          node scripts/test-GuardianV67-TableScopeAudit.mjs
-          if($LASTEXITCODE -ne 0){throw 'V67 Node test failed'}
           node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
           node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
           node --check scripts/GuardianV67-TableScopeAudit.mjs
@@ -75,6 +71,10 @@ jobs:
       - name: Windows syntax and safe argument rejection
         shell: pwsh
         run: |
+          node --check scripts/GuardianV67-TableScopeAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V67 Node parser failed'}
+          node scripts/test-GuardianV67-TableScopeAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V67 Node test failed'}
           node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
           if($LASTEXITCODE -ne 0){throw 'V66 Node parser failed'}
           node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
