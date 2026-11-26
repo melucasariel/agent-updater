@@ -139,13 +139,17 @@ function ciphertextHash(file){
   stream.on('end',()=>resolve(h.digest('hex')));
  });
 }
+export function verifyPg17PatchVersion(version){
+ const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)\b/.exec(version||'');
+ if(!m||Number(m[1])<12)fail('PG17_PATCH_LEVEL_BLOCKED');
+ return true;
+}
 function deepReadPatchGate(image){
  const version=dockerProbe(['run','--rm','--pull','never','--network','none',
   '--read-only','--cap-drop','ALL','--security-opt','no-new-privileges',
   '--pids-limit','32','--memory','128m','--cpus','1','--user','999:999',
   '--entrypoint','pg_restore',image,'--version'],25000);
- const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)\b/.exec(version||'');
- if(!m||Number(m[1])<12)fail('PG17_PATCH_LEVEL_BLOCKED');
+ return verifyPg17PatchVersion(version);
 }
 async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlainSha,mode='toc'){
  if(!['toc','full'].includes(mode))fail('UNSAFE_RESTORE_MODE');
