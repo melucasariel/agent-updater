@@ -51,9 +51,17 @@ try{
  assert.equal(result.toc.shapeAudit.extensionEntries,result.toc.counts.EXTENSION);
  assert.equal(result.toc.shapeAudit.rolesAndAclRestoreReady,false);
  assert.equal(result.toc.shapeAudit.verifiedHistoricalGlobalRoles,0);
+ assert.equal(result.toc.blindSpotAudit.entries,result.toc.items);
+ assert.equal(result.toc.blindSpotAudit.recognizedPublicPgKindsNotInV65+
+   result.toc.blindSpotAudit.otherUnknownShapes,result.toc.shapeAudit.unrecognizedTypes);
+ assert.equal(result.toc.blindSpotAudit.nonstandardInCandidateOnlyTypes+
+   result.toc.blindSpotAudit.nonstandardInNoOwnerProofTypes,result.toc.shapeAudit.nonstandardLastTokens);
+ assert.equal(result.toc.blindSpotAudit.historicalRolesVerified,false);
+ assert.equal(result.toc.blindSpotAudit.restoreReady,false);
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
+ console.log('V66_AUTHENTICATED_SYNTHETIC_BLIND_AUDIT=PASS');
  console.log('V65_AUTHENTICATED_SYNTHETIC_SHAPE_AUDIT=PASS');
  console.log('V54_AUTHENTICATED_REAL_PGDUMP_TOC_SYNTHETIC=PASS');
  console.log('V54_TOC_POLICY_INDEX_DATA_COUNTS=PASS');
