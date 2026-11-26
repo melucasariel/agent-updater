@@ -23,22 +23,21 @@ export function auditTocTableDataPairs(toc){
   const map=kind==='table'?tables:data;
   map.set(key,(map.get(key)||0)+1);
  }
+ // Traverse the union so duplicate TABLE DATA entries without any TABLE are
+ // counted too. Never count an ambiguous or non-unique key as a confirmed pair.
  let paired=0,unpairedSimpleTables=0,unpairedSimpleData=0,duplicateOrNonUnique=0;
- for(const [key,n] of tables){
-  const d=data.get(key)||0;
-  if(n===1&&d===1)paired++;
-  else{
-   if(n>1||d>1)duplicateOrNonUnique+=n+d;
-   unpairedSimpleTables+=n;
-  }
- }
- for(const [key,n] of data){
-  const t=tables.get(key)||0;
-  if(t!==1||n!==1)unpairedSimpleData+=n;
+ for(const key of new Set([...tables.keys(),...data.keys()])){
+  const n=tables.get(key)||0,d=data.get(key)||0;
+  if(n===1&&d===1){paired++;continue;}
+  unpairedSimpleTables+=n;
+  unpairedSimpleData+=d;
+  if(n>1||d>1)duplicateOrNonUnique+=n+d;
  }
  if(tableEntries!==paired+unpairedSimpleTables+ambiguousTables||
     dataEntries!==paired+unpairedSimpleData+ambiguousData||
-    tableEntries+dataEntries>base.entries)
+    tableEntries+dataEntries>base.entries||
+    duplicateOrNonUnique>unpairedSimpleTables+unpairedSimpleData||
+    duplicateOrNonUnique===1)
   throw Error('TOC_TABLE_DATA_PAIR_ARITHMETIC');
  return Object.freeze({
   entries:base.entries,tableEntries,dataEntries,
