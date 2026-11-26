@@ -80,6 +80,12 @@ try{
   result.toc.tableDataPairs.ambiguousDataEntries,result.toc.counts.TABLE_DATA);
  assert.equal(result.toc.tableDataPairs.rowCountsVerified,false);
  assert.equal(result.toc.tableDataPairs.productionTouched,false);
+ // pg_dump PG17 partitioned parent has TABLE without an independent
+ // TABLE DATA entry; emptiness/missing records must NOT be inferred.
+ assert.ok(result.toc.counts.TABLE>=4);
+ assert.ok(result.toc.tableDataPairs.structurallyPaired>=1);
+ assert.ok(result.toc.tableDataPairs.unpairedSimpleTableEntries>=1);
+ assert.equal(result.toc.tableDataPairs.allTableDataVerified,false);
 
  const safe=renderSafeCatalogReport(result);
  assert.equal(typeof safe,'string');
@@ -101,6 +107,7 @@ try{
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
+ console.log('V68_PG17_PARTITION_PARENT_NOT_FALSE_DATA_LOSS=PASS');
  console.log('V68_AUTHENTICATED_REAL_RENDERER_V55_PARSER_CONTRACT=PASS');
  console.log('V68_AUTHENTICATED_SYNTHETIC_TABLE_DATA_PAIRS=PASS');
  console.log('V67_AUTHENTICATED_SYNTHETIC_TABLE_SCOPE=PASS');
