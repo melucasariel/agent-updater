@@ -7,6 +7,8 @@ const MARK=/^\s*\d+;\s+\d+\s+\d+\s+(.+)$/;
 export function auditTocTableDataPairs(toc){
  const base=auditTocShape(toc);
  const tables=new Map(),data=new Map();
+ const oidTables=new Map(),oidData=new Map();
+ let oidInvalidTable=0,oidInvalidData=0;
  let tableEntries=0,dataEntries=0,ambiguousTables=0,ambiguousData=0;
  // These disjoint shape buckets reveal reasons WITHOUT revealing identifiers.
  let ambiguousTableQuoted=0,ambiguousTableUnicode=0,ambiguousTableOther=0;
@@ -20,6 +22,20 @@ export function auditTocTableDataPairs(toc){
   if(payload.startsWith('TABLE DATA ')){kind='data';rest=payload.slice(11);dataEntries++;}
   else if(payload.startsWith('TABLE ')){kind='table';rest=payload.slice(6);tableEntries++;}
   else continue;
+  // The third numeric field is the object's OID; TABLE uses catalog class
+  // 1259 and TABLE DATA normally uses class 0. Verify exact class and
+  // nonzero 32-bit OID before considering an independent metadata match.
+  const oidLine=/^\s*\d+;\s+(\d+)\s+(\d+)\s+/.exec(line);
+  const expectedClass=kind==='table'?'1259':'0';
+  const oid=oidLine?.[2];
+  const validOid=oidLine?.[1]===expectedClass&&
+    /^(?:[1-9][0-9]*)$/.test(oid||'')&&
+    Number(oid)<=4294967295;
+  if(validOid){
+   const target=kind==='table'?oidTables:oidData;
+   target.set(oid,(target.get(oid)||0)+1);
+  }else if(kind==='table')oidInvalidTable++;
+  else oidInvalidData++;
   const id=SIMPLE.exec(rest);
   if(!id){
    if(kind==='table'){
@@ -60,6 +76,15 @@ export function auditTocTableDataPairs(toc){
   else if(n===0&&d===1)dataOnly++;
   else throw Error('TOC_PAIR_GAP_UNEXPECTED');
  }
+ let oidPaired=0,oidOnlyTable=0,oidOnlyData=0,oidDuplicateTable=0,oidDuplicateData=0;
+ for(const oid of new Set([...oidTables.keys(),...oidData.keys()])){
+  const t=oidTables.get(oid)||0,d=oidData.get(oid)||0;
+  if(t===1&&d===1){oidPaired++;continue;}
+  if(t>1||d>1){oidDuplicateTable+=t;oidDuplicateData+=d;}
+  else if(t===1&&d===0)oidOnlyTable++;
+  else if(t===0&&d===1)oidOnlyData++;
+  else throw Error('TOC_OID_COUNTER_UNEXPECTED');
+ }
  if(tableEntries!==paired+unpairedSimpleTables+ambiguousTables||
     dataEntries!==paired+unpairedSimpleData+ambiguousData||
     tableEntries+dataEntries>base.entries||
@@ -68,7 +93,9 @@ export function auditTocTableDataPairs(toc){
     ambiguousTables!==ambiguousTableQuoted+ambiguousTableUnicode+ambiguousTableOther||
     unpairedSimpleTables!==tableOnly+ownerMismatchTables+nonuniqueTables||
     unpairedSimpleData!==dataOnly+ownerMismatchData+nonuniqueData||
-    duplicateOrNonUnique!==nonuniqueTables+nonuniqueData)
+    duplicateOrNonUnique!==nonuniqueTables+nonuniqueData||
+    tableEntries!==oidPaired+oidOnlyTable+oidDuplicateTable+oidInvalidTable||
+    dataEntries!==oidPaired+oidOnlyData+oidDuplicateData+oidInvalidData)
   throw Error('TOC_TABLE_DATA_PAIR_ARITHMETIC');
  return Object.freeze({
   entries:base.entries,tableEntries,dataEntries,
@@ -76,6 +103,9 @@ export function auditTocTableDataPairs(toc){
   unpairedSimpleDataEntries:unpairedSimpleData,
   ambiguousTableEntries:ambiguousTables,ambiguousDataEntries:ambiguousData,
   duplicateOrNonUniqueEntries:duplicateOrNonUnique,
+  oidStructurallyMatched:oidPaired,
+  oidTableOnly:oidOnlyTable,oidDataOnly:oidOnlyData,
+  oidDuplicateTable,oidDuplicateData,oidInvalidTable,oidInvalidData,
   ambiguousTableQuoted,ambiguousTableUnicode,ambiguousTableOther,
   simpleTableWithoutData:tableOnly,simpleDataWithoutTable:dataOnly,
   simpleTableOwnerMismatch:ownerMismatchTables,simpleDataOwnerMismatch:ownerMismatchData,
