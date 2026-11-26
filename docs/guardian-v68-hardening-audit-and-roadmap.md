@@ -72,6 +72,10 @@ Operator-reported V25: local Supabase CLI present; manually selected local TaxiR
 
 User confirmed admin access to the original TaxiRadar Supabase project and executed a read-only SQL Editor summary there: PostgreSQL 17.12; 31 roles, 10 login roles, 6 roles with CREATEROLE, 5 BYPASSRLS roles; 7 installed extensions. Installed extension versions: pgcrypto 1.3, pg_cron 1.6.4, pg_net 0.20.4. pg_graphql/vector/postgis were **not installed** in the live source at query time (NULL from filtered pg_extension); local PG17 image has only their control files/default versions, not proof of activation. Four other live extensions were not named by this aggregate query. Crucially live source state != historical backup snapshot: do not infer archive historical extensions/roles or restoration coverage from this scan. Next execute read-only exact pg_extension name+version inventory, then prepare a provenance-labelled protected role-only export when authorized and linked to verified source. No role secrets, login names, or passwords reported.
 
+## Original Supabase V27 exact installed extension inventory — 2026-11-26
+
+Operator executed read-only origin SQL Editor `pg_catalog.pg_extension` inventory: `pg_cron 1.6.4`, `pg_net 0.20.4`, `pg_stat_statements 1.11`, `pgcrypto 1.3`, `plpgsql 1.0`, `supabase_vault 0.3.2`, `uuid-ossp 1.1`. Origin currently has seven installed extensions. Previously inspected local image control files for six *different* candidates: pgcrypto/pg_cron/pg_net/pg_graphql/vector/postgis. Additional original live source extensions, especially supabase_vault, must be checked explicitly in the local image before a real restore. Do not presume all historical six archive EXTENSION entries equal the current seven; plpgsql may have different dump handling. No actual source globals export or historical roles confirmation yet.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
