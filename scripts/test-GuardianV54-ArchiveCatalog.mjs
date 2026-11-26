@@ -104,10 +104,28 @@ try{
   e=>e.message==='PAIR_REPORT_INCOMPLETE');
 
 
+ // Explicit opt-in deep scan: PostgreSQL writes its generated restore script
+ // ONLY to /dev/null inside a networkless, readonly Docker container. No DB.
+ const deep=await examine(archive,sha(wrapped),password,{deepRead:true});
+ assert.equal(deep.deepRead.fullRead,true);
+ assert.equal(deep.deepRead.sqlExecuted,false);
+ assert.equal(deep.deepRead.rowsValidated,false);
+ const deepReport=renderSafeCatalogReport(deep);
+ const dp=parseSafeReport(deepReport);
+ assert.equal(dp.items,result.toc.items);
+ assert.ok(deepReport.includes('DEEP_FULL_ARCHIVE_READ=PASS'));
+ assert.ok(deepReport.includes('DEEP_ROWS_VALIDATED=NO'));
+ assert.ok(deepReport.includes('DEEP_SQL_EXECUTED=NO'));
+ assert.throws(()=>parseSafeReport(deepReport.replace('DEEP_ROWS_VALIDATED=NO','DEEP_ROWS_VALIDATED=YES')),
+  e=>e.message==='DEEP_REPORT_INCOMPLETE');
+ assert.throws(()=>parseSafeReport(deepReport.replace('DEEP_SQL_EXECUTED=NO','DEEP_SQL_EXECUTED=YES')),
+  e=>e.message==='DEEP_REPORT_INCOMPLETE');
+
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
  console.log('V68_PG17_PARTITION_PARENT_NOT_FALSE_DATA_LOSS=PASS');
+ console.log('V69_AUTHENTICATED_SYNTHETIC_FULL_STREAM_NO_SQL=PASS');
  console.log('V68_AUTHENTICATED_REAL_RENDERER_V55_PARSER_CONTRACT=PASS');
  console.log('V68_AUTHENTICATED_SYNTHETIC_TABLE_DATA_PAIRS=PASS');
  console.log('V67_AUTHENTICATED_SYNTHETIC_TABLE_SCOPE=PASS');
