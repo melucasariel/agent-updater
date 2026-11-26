@@ -59,6 +59,9 @@ try{
  put(mf,JSON.stringify(m));put(sig,crypto.sign(null,fs.readFileSync(mf),keys.privateKey));
  denied(params,'INVALID_COMPONENT');
  build();
+ const unexpected=put(path.join(bundle,'undeclared-secret.key'),'SYNTHETIC_ONLY');
+ denied(params,'UNDECLARED_BUNDLE_FILE');
+ fs.rmSync(unexpected);
  const insidePub=put(path.join(bundle,'trusted.pem'),fs.readFileSync(pub));
  denied({...params,publicKeyFile:insidePub},'TRUST_ANCHOR_INSIDE_BUNDLE');
  // No symlink from within bundle to a file outside, even with a valid
