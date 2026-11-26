@@ -34,7 +34,8 @@ function canonicalId(m){
  }).join('\n');
  return crypto.createHash('sha256').update(stable,'utf8').digest('hex');
 }
-export function summarizeIndex(indexFile){
+export function summarizeIndex(indexFile, trustedKeySha256){
+ if(typeof trustedKeySha256!=='string'||!key.test(trustedKeySha256))fail('INDEPENDENT_TRUST_REQUIRED');
  if(!path.isAbsolute(indexFile))fail('INDEX_PATH_INVALID');
  const st=fs.lstatSync(indexFile);
  if(!st.isFile()||st.isSymbolicLink()||st.size<3||st.size>1024*1024)fail('INDEX_INVALID');
@@ -49,12 +50,13 @@ export function summarizeIndex(indexFile){
   exact(entry,['bundleRoot','vaultFile','publicKeyFile','keySha256']);
   for(const f of [entry.bundleRoot,entry.vaultFile,entry.publicKeyFile])if(typeof f!=='string'||!path.isAbsolute(f))fail('INDEX_PATH_INVALID');
   if(typeof entry.keySha256!=='string'||!key.test(entry.keySha256))fail('INDEX_KEY_INVALID');
+  if(entry.keySha256.toLowerCase()!==trustedKeySha256.toLowerCase())fail('UNTRUSTED_SIGNER_IN_INDEX');
   const root=path.resolve(entry.bundleRoot);
   if(bundlePaths.has(root))fail('INDEX_DUPLICATE_BUNDLE');
   bundlePaths.add(root);
   const mf=path.join(root,'manifest.json'),sig=path.join(root,'manifest.sig');
   checkSignedBundle({bundleRoot:root,manifestFile:mf,signatureFile:sig,
-    publicKeyFile:entry.publicKeyFile,vaultFile:entry.vaultFile,expectedKeySha256:entry.keySha256});
+    publicKeyFile:entry.publicKeyFile,vaultFile:entry.vaultFile,expectedKeySha256:trustedKeySha256});
   const m=JSON.parse(fs.readFileSync(mf,'utf8'));
   const packageHash=canonicalId(m);
   const databaseHash=m.components.find(x=>x.role==='database')?.sha256.toLowerCase();
@@ -77,8 +79,8 @@ export function summarizeIndex(indexFile){
   captureDateIndependentlyVerified:false};
 }
 function cli(args){
- if(args.length!==2||args[0]!=='--inventory')fail('USAGE');
- const r=summarizeIndex(args[1]);
+ if(args.length!==4||args[0]!=='--inventory'||args[2]!=='--trusted-key-sha256')fail('USAGE');
+ const r=summarizeIndex(args[1],args[3]);
  console.log(['=== ROTA62 GUARDIAN V6.1 SIGNED RECOVERY INVENTORY ===',
   'SIGNED_BACKUP_BUNDLES='+r.signedBundles,
   'DISTINCT_FULL_PACKAGES='+r.distinctPackages,
@@ -97,7 +99,8 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  catch(e){
   const known=new Set(['USAGE','INDEX_PATH_INVALID','INDEX_INVALID','INDEX_JSON_INVALID',
     'INDEX_SCHEMA_INVALID','INDEX_KEY_INVALID','INDEX_DUPLICATE_BUNDLE',
-    'CAPTURE_ID_COLLISION','MANIFEST_COMPONENT_INVALID','DATABASE_HASH_INVALID']);
+    'CAPTURE_ID_COLLISION','MANIFEST_COMPONENT_INVALID','DATABASE_HASH_INVALID',
+    'INDEPENDENT_TRUST_REQUIRED','UNTRUSTED_SIGNER_IN_INDEX']);
   console.log('=== ROTA62 GUARDIAN V6.1 SIGNED RECOVERY INVENTORY ===\nSTATUS=BLOCKED_'+
    (known.has(e.message)?e.message:'SIGNED_BUNDLE_INVALID_OR_UNTRUSTED')+
    '\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');
