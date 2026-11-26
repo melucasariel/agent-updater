@@ -80,6 +80,10 @@ Operator executed read-only origin SQL Editor `pg_catalog.pg_extension` inventor
 
 Operator local V28 `STATUS=PASS` on PG17 image, `EXTENSIONS_CHECKED=4`: `pg_stat_statements` control default 1.11; `plpgsql` 1.0; `supabase_vault` 0.3.2; `uuid-ossp` 1.1. These correspond to the current origin V27 installed versions. Combined with origin-local parity for pgcrypto/pg_cron/pg_net, **all seven current origin extension version labels equal local image control defaults**. This does not prove loadable libraries, executable CREATE EXTENSION, SQL scripts, historical six EXTENSION entries, historical role definitions or real restore; none were executed. Avoid representing control-file parity as completed recovery. Next step: read-only origin role and membership catalog summary and explicit permission for secure current `--role-only` export. Current origin snapshot cannot be labelled original historical globals.
 
+## Original Supabase read-only role and membership inventory V29 — 2026-11-26
+
+Operator-run SQL Editor V29 returned `total_roles=31`, `login_roles=10`, `superuser_roles=1`, `createdb_roles=3`, `createrole_roles=6`, `replication_roles=5`, `bypass_rls_roles=5`, `roles_with_expiration=0`; `membership_grants=24`, `granted_roles=12`, `member_roles=7`, `admin_grants=8`, `inheritable_grants=17`, `set_role_grants=24`; `distinct_relation_owners=5`, `total_user_relations=306`. All are **current source counts**, do not validate historical role globals or password hashes. Role-only export with Supabase CLI is a future guarded operation: explicit operator selection/authorization of source, no secret output, strong encryption at rest, error-safe removal of plaintext intermediates, and comparison of versioned roles to archive role dependencies before any actual restore. Source DB and CLEAN6 must remain unchanged.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
