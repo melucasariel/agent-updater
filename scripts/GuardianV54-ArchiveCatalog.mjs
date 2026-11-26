@@ -212,12 +212,9 @@ export async function examine(file,sha,password){
  const toc=await catalogFromEncrypted(file,password);
  return {auth,toc};
 }
-export async function main(argv){
- const p=cliOptions(argv);
- // Fail closed before password. Never execute archiver until full GCM authentication.
- localDocker(); // No password prompt unless a local, preloaded, networkless pg_restore runtime exists.
- const pass=await passwordTTY();
- const result=await examine(p.archive,p.sha,pass);
+// Pure report contract, shared by authenticated production path and synthetic tests.
+// Contains only fixed whitelisted labels, numeric counters, and fixed-length digests.
+export function renderSafeCatalogReport(result){
  const lines=['=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===',
   'CIPHERTEXT_SHA256_MATCH=YES','AES_GCM_TAG_AUTHENTICATED=YES',
   'LOCAL_PG17_IMAGE_VERIFIED=YES',
@@ -261,8 +258,17 @@ export async function main(argv){
  lines.push('DATABASE_RESTORED=NO','ROLES_ACL_RESTORED=NO');
  lines.push('ARCHIVE_PLAINTEXT_FILE_WRITTEN=NO','PRODUCTION_TOUCHED=NO');
  lines.push('RTO_4_TO_6_HOURS_PROVEN=NO','END_REPORT_OK');
- fs.writeFileSync(p.report,lines.join('\n')+'\n',{flag:'wx',mode:0o600});
- console.log(lines.join('\n'));
+ return lines.join('\n');
+}
+export async function main(argv){
+ const p=cliOptions(argv);
+ // Fail closed before password. Never execute archiver until full GCM authentication.
+ localDocker(); // No password prompt unless a local, preloaded, networkless pg_restore runtime exists.
+ const pass=await passwordTTY();
+ const result=await examine(p.archive,p.sha,pass);
+ const report=renderSafeCatalogReport(result);
+ fs.writeFileSync(p.report,report+'\n',{flag:'wx',mode:0o600});
+ console.log(report);
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  main(process.argv.slice(2)).catch(err=>{
