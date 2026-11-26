@@ -158,6 +158,44 @@ console.log('V68_DATA_ONLY_DUPLICATES_COUNTED=PASS');
 console.log('V68_REPEATED_PAIR_DEMOTED=PASS');
 console.log('V68_QUOTED_UNICODE_AND_OWNER_AMBIGUITY=PASS');
 
+
+const explain=[
+ '1; 1 1 TABLE public paired postgres',
+ '2; 1 1 TABLE DATA public paired postgres',
+ '3; 1 1 TABLE public only_table postgres',
+ '4; 1 1 TABLE DATA public only_data postgres',
+ '5; 1 1 TABLE public owner_conflict postgres',
+ '6; 1 1 TABLE DATA public owner_conflict another_owner',
+ '7; 1 1 TABLE public duplicate_table postgres',
+ '8; 1 1 TABLE public duplicate_table other_owner',
+ '9; 1 1 TABLE DATA public duplicate_table postgres',
+ '10; 1 1 TABLE "quoted schema" quoted_name postgres',
+ '11; 1 1 TABLE public café postgres',
+ '12; 1 1 TABLE public whitespace  owner',
+ '13; 1 1 EXTENSION - pgcrypto'
+].join('\n');
+const e=auditTocTableDataPairs(explain);
+assert.equal(e.tableEntries,9);
+assert.equal(e.dataEntries,4);
+assert.equal(e.structurallyPaired,1);
+assert.equal(e.ambiguousTableEntries,3);
+assert.equal(e.ambiguousTableQuoted,1);
+assert.equal(e.ambiguousTableUnicode,1);
+assert.equal(e.ambiguousTableOther,1);
+assert.equal(e.ambiguousDataEntries,0);
+assert.equal(e.simpleTableWithoutData,1);
+assert.equal(e.simpleDataWithoutTable,1);
+assert.equal(e.simpleTableOwnerMismatch,1);
+assert.equal(e.simpleDataOwnerMismatch,1);
+assert.equal(e.simpleNonuniqueTables,2);
+assert.equal(e.simpleNonuniqueData,1);
+assert.equal(e.duplicateOrNonUniqueEntries,3);
+assert.equal(e.unpairedSimpleTableEntries,4);
+assert.equal(e.unpairedSimpleDataEntries,3);
+for(const value of ['only_table','only_data','owner_conflict','quoted schema','café'])
+ assert.equal(JSON.stringify(e).includes(value),false);
+console.log('V68_GAP_REASONS_RECONCILED_AND_PRIVATE=PASS');
+
 console.log('V68_TABLE_DATA_PAIR_COUNTS_RECONCILE=PASS');
 console.log('V68_DUPLICATE_AND_AMBIGUOUS_FAIL_CLOSED=PASS');
 console.log('V68_NO_PRIVATE_NAMES_OR_DATA_PROOF=PASS');
