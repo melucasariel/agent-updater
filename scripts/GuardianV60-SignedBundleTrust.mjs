@@ -103,6 +103,21 @@ export function checkSignedBundle({bundleRoot,manifestFile,signatureFile,publicK
  if(seenRoles.size!==REQUIRED.length)fail('MISSING_COMPONENT');
  // Ensure signed manifest was not replaced between signature check and return.
  if(!crypto.verify(null,fs.readFileSync(manifestFile),key,signature))fail('MANIFEST_CHANGED');
+ // Reject hidden/undeclared files, including accidentally bundled secrets.
+ // Only exactly the seven signed component files plus manifest and signature
+ // are permitted. Extra empty folders are harmless but still scanned.
+ const allowed=new Set([mf.real,sig.real,...seenFiles]);
+ const queue=[root];let examined=0;
+ while(queue.length){
+  const dir=queue.shift();
+  for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+   if(++examined>10000)fail('BUNDLE_ENTRY_LIMIT');
+   const f=path.join(dir,e.name),s=fs.lstatSync(f);
+   if(s.isSymbolicLink())fail('BUNDLE_UNDECLARED_SYMLINK');
+   if(s.isDirectory())queue.push(f);
+   else if(!s.isFile()||!allowed.has(fs.realpathSync(f)))fail('UNDECLARED_BUNDLE_FILE');
+  }
+ }
  const fingerprint=crypto.createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex');
  return {count:seenRoles.size,totalBytes:bytes,keySha16:fingerprint.slice(0,16).toUpperCase(),
   manifestSha16:crypto.createHash('sha256').update(raw).digest('hex').slice(0,16).toUpperCase()};
@@ -139,7 +154,8 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
     'TRUST_ANCHOR_INSIDE_BUNDLE','VAULT_INSIDE_BUNDLE','MANIFEST_NOT_IN_BUNDLE',
     'SYMLINK_OR_ESCAPE_BLOCKED','INVALID_TRUST_ANCHOR','TRUST_KEY_NOT_ED25519',
     'SIGNATURE_INVALID','INVALID_COMPONENT','DUPLICATE_COMPONENT_PATH',
-    'COMPONENT_HASH_MISMATCH','MISSING_COMPONENT','MANIFEST_CHANGED']);
+    'COMPONENT_HASH_MISMATCH','MISSING_COMPONENT','MANIFEST_CHANGED',
+    'BUNDLE_ENTRY_LIMIT','BUNDLE_UNDECLARED_SYMLINK','UNDECLARED_BUNDLE_FILE']);
   console.log('=== ROTA62 GUARDIAN V6.0 SIGNED BACKUP TRUST ===\nSTATUS=BLOCKED_'+
    (known.has(e.message)?e.message:'REDACTED')+
    '\nDATABASE_RESTORED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');
