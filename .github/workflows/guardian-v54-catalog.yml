@@ -40,7 +40,7 @@ jobs:
           if docker image inspect postgres:17 >/dev/null 2>&1; then echo "Exact tag unexpectedly present"; exit 1; fi
           # Independent real pg_restore listing: extension has an object name
           # but no role owner token in PG17's custom archive TOC.
-          docker run --rm --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint pg_restore postgres:17-alpine --list < "$root/synthetic.dump" > "$root/toc"
+          docker run --rm -i --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint pg_restore postgres:17-alpine --list < "$root/synthetic.dump" > "$root/toc"
           node scripts/test-GuardianV64-TocDependencyPreflight.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
