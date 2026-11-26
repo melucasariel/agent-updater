@@ -58,9 +58,20 @@ try{
    result.toc.blindSpotAudit.nonstandardInNoOwnerProofTypes,result.toc.shapeAudit.nonstandardLastTokens);
  assert.equal(result.toc.blindSpotAudit.historicalRolesVerified,false);
  assert.equal(result.toc.blindSpotAudit.restoreReady,false);
+ assert.equal(result.toc.tableScopeAudit.catalogItems,result.toc.items);
+ assert.equal(result.toc.tableScopeAudit.tableEntries,result.toc.counts.TABLE);
+ assert.equal(result.toc.tableScopeAudit.tableDataEntries,result.toc.counts.TABLE_DATA);
+ assert.equal(result.toc.tableScopeAudit.publicSchemaTableEntries+
+  result.toc.tableScopeAudit.otherSimpleSchemaTableEntries+
+  result.toc.tableScopeAudit.noSchemaTableEntries+
+  result.toc.tableScopeAudit.complexOrAmbiguousSchemaTableEntries,
+  result.toc.counts.TABLE);
+ assert.equal(result.toc.tableScopeAudit.originalUserTablesValidated,false);
+ assert.equal(result.toc.tableScopeAudit.sqlExecuted,false);
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
+ console.log('V67_AUTHENTICATED_SYNTHETIC_TABLE_SCOPE=PASS');
  console.log('V66_AUTHENTICATED_SYNTHETIC_BLIND_AUDIT=PASS');
  console.log('V65_AUTHENTICATED_SYNTHETIC_SHAPE_AUDIT=PASS');
  console.log('V54_AUTHENTICATED_REAL_PGDUMP_TOC_SYNTHETIC=PASS');
