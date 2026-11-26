@@ -296,7 +296,13 @@ export function renderSafeCatalogReport(result){
   lines.push('DEEP_ROWS_VALIDATED=NO');
   lines.push('DEEP_SQL_EXECUTED=NO');
  }
- for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
+ // Explicit zeros preserve strict V5.5 parser compatibility for small synthetic
+ // and future archives, without weakening its required-field checks.
+ const tocCounts={...result.toc.counts};
+ for(const kind of ['TABLE','TABLE_DATA','EXTENSION','FUNCTION','ACL',
+  'DEFAULT_ACL','POLICY','ROW_SECURITY','TRIGGER','INDEX'])
+  if(!Object.hasOwn(tocCounts,kind))tocCounts[kind]=0;
+ for(const [k,v] of Object.entries(tocCounts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
  lines.push('PG_RESTORE_EXECUTED_SQL=NO');
