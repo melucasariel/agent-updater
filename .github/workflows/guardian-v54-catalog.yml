@@ -13,6 +13,7 @@ on:
       - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+      - scripts/test-GuardianV69-PatchGate.mjs
       - .github/workflows/guardian-v54-catalog.yml
   pull_request:
     paths:
@@ -27,6 +28,7 @@ on:
       - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+      - scripts/test-GuardianV69-PatchGate.mjs
       - .github/workflows/guardian-v54-catalog.yml
   workflow_dispatch:
 permissions:
@@ -40,6 +42,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/test-GuardianV69-PatchGate.mjs
+          if($LASTEXITCODE -ne 0){throw 'V69 patch gate regression failed'}
           node --check scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
           if($LASTEXITCODE -ne 0){throw 'V69 synthetic full read test parser failed'}
           node --check scripts/GuardianV54-ArchiveCatalog.mjs
@@ -71,6 +75,7 @@ jobs:
           node --check scripts/GuardianV68-TableDataPairAudit.mjs
           node scripts/test-GuardianV68-TableDataPairAudit.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
+          node scripts/test-GuardianV69-PatchGate.mjs
           node scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
