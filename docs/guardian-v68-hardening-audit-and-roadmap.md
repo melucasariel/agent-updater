@@ -48,6 +48,10 @@ This is evidence that the user's machine can carry out a small synthetic dump/re
 
 The operator supplied local offline V18 report: `STATUS=PASS`, `EXTENSION_DIRECTORY=FOUND`, `EXTENSIONS_CHECKED=6`; control files for `pgcrypto`, `pg_cron`, `pg_net`, `pg_graphql`, `vector`, and `postgis` all reported `YES` on a locally available PostgreSQL 17 image. This is **control-file presence only**, not proof of installed SQL definitions, library loadability, dependencies, restore compatibility, historical extension version matching, or production recovery. The probe used no SQL/server, backup data, image download, production or CLEAN6. Next gates: query local extension control default versions plus available migration scripts without sharing paths; obtain historical extension versions/roles from authorized historical artifacts before real restore. 
 
+## Operator-reported extension default versions — 2026-11-26
+
+Local V19 operator diagnostic: `STATUS=PASS`, six control files read on preloaded PostgreSQL 17 image, defaults: `pgcrypto=1.3`, `pg_cron=1.6.4`, `pg_net=0.20.4`, `pg_graphql=1.6.3`, `vector=0.8.2`, `postgis=3.3.7`. These are **local control-file default versions only**. No extension creation, SQL library load, backup content, historical version comparison, or global roles verification occurred. Next offline gate: locate matching versioned installation scripts and library artifacts, then obtain independent historical extension and globals evidence before real restore.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
