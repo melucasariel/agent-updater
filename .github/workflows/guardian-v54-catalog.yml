@@ -5,6 +5,8 @@ on:
       - scripts/GuardianV54-ArchiveCatalog.mjs
       - scripts/GuardianV65-TocShapeRiskAudit.mjs
       - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   pull_request:
@@ -12,6 +14,8 @@ on:
       - scripts/GuardianV54-ArchiveCatalog.mjs
       - scripts/GuardianV65-TocShapeRiskAudit.mjs
       - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
       - .github/workflows/guardian-v54-catalog.yml
   workflow_dispatch:
@@ -48,6 +52,8 @@ jobs:
           node scripts/test-GuardianV64-TocDependencyPreflight.mjs
           node --check scripts/GuardianV65-TocShapeRiskAudit.mjs
           node scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+          node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
+          node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
           node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
           echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
           if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
@@ -59,6 +65,10 @@ jobs:
       - name: Windows syntax and safe argument rejection
         shell: pwsh
         run: |
+          node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V66 Node parser failed'}
+          node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V66 Node test failed'}
           node --check scripts/GuardianV54-ArchiveCatalog.mjs
           if($LASTEXITCODE -ne 0){throw 'Node parser failed'}
           $out=@(node scripts/GuardianV54-ArchiveCatalog.mjs --archive missing)
