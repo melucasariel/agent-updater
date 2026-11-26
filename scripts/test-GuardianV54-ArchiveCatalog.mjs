@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
-import {examine} from './GuardianV54-ArchiveCatalog.mjs';
+import {examine,renderSafeCatalogReport} from './GuardianV54-ArchiveCatalog.mjs';
+import {parseSafeReport} from './GuardianV55-RecoveryPreflight.mjs';
 const pgdump=process.argv[2];
 if(!pgdump||!fs.statSync(pgdump).isFile())throw Error('Synthetic pg_dump fixture required');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'guardian-v54-toc-'));
@@ -80,9 +81,27 @@ try{
  assert.equal(result.toc.tableDataPairs.rowCountsVerified,false);
  assert.equal(result.toc.tableDataPairs.productionTouched,false);
 
+ const safe=renderSafeCatalogReport(result);
+ assert.equal(typeof safe,'string');
+ assert.ok(safe.includes('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA'));
+ assert.ok(safe.includes('PAIR_ROWS_VERIFIED=NO'));
+ assert.ok(safe.endsWith('END_REPORT_OK'));
+ assert.equal(safe.split('\n').length<=80,true);
+ // The exact renderer used by main() must pass the actual V5.5 parser.
+ const parsed=parseSafeReport(safe);
+ assert.equal(parsed.items,result.toc.items);
+ assert.equal(parsed.counts.TABLE,result.toc.tableDataPairs.tableEntries);
+ assert.equal(parsed.counts.TABLE_DATA,result.toc.tableDataPairs.dataEntries);
+ for(const secret of ['events_state_idx','events_read','LOCAL_SYNTHETIC_ONLY_NOT_REAL_PASSWORD'])
+  assert.equal(safe.includes(secret),false);
+ assert.throws(()=>parseSafeReport(safe.replace('PAIR_ROWS_VERIFIED=NO','PAIR_ROWS_VERIFIED=YES')),
+  e=>e.message==='PAIR_REPORT_INCOMPLETE');
+
+
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
+ console.log('V68_AUTHENTICATED_REAL_RENDERER_V55_PARSER_CONTRACT=PASS');
  console.log('V68_AUTHENTICATED_SYNTHETIC_TABLE_DATA_PAIRS=PASS');
  console.log('V67_AUTHENTICATED_SYNTHETIC_TABLE_SCOPE=PASS');
  console.log('V66_AUTHENTICATED_SYNTHETIC_BLIND_AUDIT=PASS');
