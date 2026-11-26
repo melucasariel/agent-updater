@@ -18,19 +18,21 @@ export function auditTocTableDataPairs(toc){
   else continue;
   const id=SIMPLE.exec(rest);
   if(!id){if(kind==='table')ambiguousTables++;else ambiguousData++;continue;}
-  // Exact *text* equality of schema, object and owner token is a conservative
-  // consistency check, NOT proof that the named role exists or can be restored.
-  // This ephemeral key never leaves this function.
-  const key=id[1]+'\u0000'+id[2]+'\u0000'+id[3];
+  // One schema/object pair may have only one owner. Repeated TABLE entries
+  // with DIFFERENT owners are still duplicate names and must not match data.
+  // Owner text equality is a consistency check, never verified role evidence.
+  const key=id[1]+'\u0000'+id[2];
   const map=kind==='table'?tables:data;
-  map.set(key,(map.get(key)||0)+1);
+  const seen=map.get(key);
+  map.set(key,{count:(seen?.count||0)+1,owner:seen?.owner??id[3]});
  }
  // Traverse the union so duplicate TABLE DATA entries without any TABLE are
  // counted too. Never count an ambiguous or non-unique key as a confirmed pair.
  let paired=0,unpairedSimpleTables=0,unpairedSimpleData=0,duplicateOrNonUnique=0;
  for(const key of new Set([...tables.keys(),...data.keys()])){
-  const n=tables.get(key)||0,d=data.get(key)||0;
-  if(n===1&&d===1){paired++;continue;}
+  const t=tables.get(key),v=data.get(key);
+  const n=t?.count||0,d=v?.count||0;
+  if(n===1&&d===1&&t.owner===v.owner){paired++;continue;}
   unpairedSimpleTables+=n;
   unpairedSimpleData+=d;
   if(n>1||d>1)duplicateOrNonUnique+=n+d;
