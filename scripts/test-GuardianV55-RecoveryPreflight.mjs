@@ -70,6 +70,28 @@ const pairs=[
 ];
 const v68=v67.replace('END_REPORT_OK',pairs.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v68).items,919);
+
+const detailedReasons=[
+ 'PAIR_REASON_TABLE_QUOTED=1',
+ 'PAIR_REASON_TABLE_UNICODE=0',
+ 'PAIR_REASON_TABLE_OTHER=0',
+ 'PAIR_REASON_TABLE_ONLY=5',
+ 'PAIR_REASON_DATA_ONLY=0',
+ 'PAIR_REASON_OWNER_TABLE=1',
+ 'PAIR_REASON_OWNER_DATA=1',
+ 'PAIR_REASON_NONUNIQUE_TABLE=0',
+ 'PAIR_REASON_NONUNIQUE_DATA=0'
+];
+const withReasons=v68.replace('END_REPORT_OK',detailedReasons.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(withReasons).items,919);
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_TABLE_ONLY=5','PAIR_REASON_TABLE_ONLY=4')),
+ e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_OWNER_DATA=1','PAIR_REASON_OWNER_DATA=0')),
+ e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_TABLE_UNICODE=0\n','')),
+ e=>e.message==='PAIR_REASONS_INCOMPLETE');
+assert.equal(parseSafeReport(v68).items,919); // Older V6.8 reports still valid.
+
 assert.equal(parseSafeReport(v67).items,919); // V6.7 backward compatibility.
 assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
 assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA','AUDIT_PROFILE=V68_DATA_PROVEN')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
