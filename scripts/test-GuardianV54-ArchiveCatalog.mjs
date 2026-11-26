@@ -68,9 +68,22 @@ try{
   result.toc.counts.TABLE);
  assert.equal(result.toc.tableScopeAudit.originalUserTablesValidated,false);
  assert.equal(result.toc.tableScopeAudit.sqlExecuted,false);
+ assert.equal(result.toc.tableDataPairs.entries,result.toc.items);
+ assert.equal(result.toc.tableDataPairs.tableEntries,result.toc.counts.TABLE);
+ assert.equal(result.toc.tableDataPairs.dataEntries,result.toc.counts.TABLE_DATA);
+ assert.equal(result.toc.tableDataPairs.structurallyPaired+
+  result.toc.tableDataPairs.unpairedSimpleTableEntries+
+  result.toc.tableDataPairs.ambiguousTableEntries,result.toc.counts.TABLE);
+ assert.equal(result.toc.tableDataPairs.structurallyPaired+
+  result.toc.tableDataPairs.unpairedSimpleDataEntries+
+  result.toc.tableDataPairs.ambiguousDataEntries,result.toc.counts.TABLE_DATA);
+ assert.equal(result.toc.tableDataPairs.rowCountsVerified,false);
+ assert.equal(result.toc.tableDataPairs.productionTouched,false);
+
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
  fs.writeFileSync(archive,bad);
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
+ console.log('V68_AUTHENTICATED_SYNTHETIC_TABLE_DATA_PAIRS=PASS');
  console.log('V67_AUTHENTICATED_SYNTHETIC_TABLE_SCOPE=PASS');
  console.log('V66_AUTHENTICATED_SYNTHETIC_BLIND_AUDIT=PASS');
  console.log('V65_AUTHENTICATED_SYNTHETIC_SHAPE_AUDIT=PASS');
