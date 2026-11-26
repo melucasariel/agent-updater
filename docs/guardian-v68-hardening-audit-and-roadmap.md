@@ -180,6 +180,10 @@ User requested full package to send to another computer after V50 other-disk dec
 
 Operator V52 reports `STATUS=PASS`, `TRANSFER_ZIP_CREATED=YES`, `ENCRYPTED_PACKAGE_SHA256_VERIFIED_IN_ZIP=YES`, `ZIP_CONTENTS_VERIFIED=YES`, V51 checker SHA valid, source DPAPI not read, no plaintext or production/CLEAN6 activity. The full transfer ZIP exists **on the user's original Windows computer**, not in this chat's file sandbox. Next: transfer that ZIP to a genuinely separate Windows PC, verify/extract and execute V51 reader with independently delivered portable password. V51 outputs indicate content recovery, but `OTHER_MACHINE_RECOVERY_VERIFIED=NO` until test genuinely occurs on second machine; script cannot attest device identity itself. Do not transmit password in chat or in ZIP. Current roles data does not prove historical .r62db role globals.
 
+## V51 second-computer wrapper preflight blocked — 2026-11-26
+
+Operator second-device V51 `STATUS=BLOCKED`, `LAST_STAGE=WRAPPER_PREFLIGHT`, `FAILURE_CLASS=WRAPPER_PREFLIGHT`; no package decryption attempted. Inspected exact V51 PS1 implementation: the *only operation* before stage changes to SELECT_PORTABLE_FILE is `Get-Command node` with Stop thrown on absent executable. Therefore missing/unreachable Node.js in that PowerShell session is the immediate likely blocker (unless a very early PowerShell runtime error). Next provide a single-paste operator command checking Node, if absent optionally installing official OpenJS.NodeJS.LTS via Windows winget (user knowingly invokes), refreshing PATH, verifying pin SHA256 of previously extracted V51 script in user's Documents, and relaunching V51 without changing ZIP or role package. Do not claim independent-device recovery until authenticated report PASS from actual separate machine. No production or CLEAN6.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
