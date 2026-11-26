@@ -94,6 +94,24 @@ assert.equal(owners.unpairedSimpleDataEntries,1);
 assert.equal(owners.duplicateOrNonUniqueEntries,0);
 for(const word of ['owned_private','fixture_owner','other_owner'])
  assert.equal(JSON.stringify(owners).includes(word),false);
+// Two TABLE descriptors with the same schema/name but different owner fields
+// must not allow one matching TABLE DATA to produce a verified unique pair.
+const ownerCollision=[
+ '1; 1 1 TABLE public duplicate_same_name first_owner',
+ '2; 1 1 TABLE public duplicate_same_name second_owner',
+ '3; 1 1 TABLE DATA public duplicate_same_name first_owner',
+ '4; 1 1 TABLE public unrelated_fixture first_owner',
+ '5; 1 1 TABLE DATA public unrelated_fixture first_owner',
+ '6; 1 1 EXTENSION - pgcrypto'
+].join('\n');
+const collision=auditTocTableDataPairs(ownerCollision);
+assert.equal(collision.structurallyPaired,1);
+assert.equal(collision.unpairedSimpleTableEntries,2);
+assert.equal(collision.unpairedSimpleDataEntries,1);
+assert.equal(collision.duplicateOrNonUniqueEntries,3);
+assert.equal(JSON.stringify(collision).includes('duplicate_same_name'),false);
+console.log('V68_SAME_TABLE_DIFFERENT_OWNER_COLLISION_REJECTED=PASS');
+
 console.log('V68_OWNER_TOKEN_MISMATCH_NOT_PAIRED=PASS');
 
 // Deterministic property tests: compare the auditor against independently
