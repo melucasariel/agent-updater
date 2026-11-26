@@ -56,6 +56,10 @@ Local V19 operator diagnostic: `STATUS=PASS`, six control files read on preloade
 
 V20 reported `STATUS=PASS` for six local extension artifact checks on the image. Direct `name--default_version.sql` file found for `pgcrypto`, `pg_net`, `pg_graphql`, `vector`, `postgis`; **not found** for `pg_cron--1.6.4.sql` although the corresponding control file reported `default_version=1.6.4`. This is an *unresolved installation path* (may require a base-version script plus an update chain), **not** evidence of irreparable extension or actual CREATE EXTENSION failure. No SQL executed, no restore, no historical globals or version comparison. Next: enumerate only versioned `pg_cron` SQL artifact filenames, verify reachable update graph offline, then check library dependencies and historical origin.
 
+## Operator-reported pg_cron version graph — 2026-11-26
+
+Local V22 diagnostic: `STATUS=PASS`; PostgreSQL 17 offline local extension SQL artifact inventory identified 1 direct-install script, 15 update scripts, 1 unclassified SQL filename. A filename-graph path to `pg_cron 1.6.4` is reachable in minimum 8 update steps. The earlier V21 "17 direct / 0 updates / not reachable" was an artifact of a regex allowing version delimiters in version tokens; superseded by V22. **This is only filename-graph evidence**; no SQL, CREATE EXTENSION, preload validation, actual versions at backup time, or global roles restore. Next priority is historical global role artifact provenance and controlled version compatibility, not repeating synthetic startup or memory adjustments.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
