@@ -17,9 +17,12 @@ try{
  if(-not (Get-Command docker -ErrorAction SilentlyContinue)){throw 'DOCKER_MISSING'}
  $js=Join-Path $PSScriptRoot 'GuardianV54-ArchiveCatalog.mjs'
  $auth=Join-Path $PSScriptRoot 'GuardianV53-AuthenticateR62DB.mjs'
- if(-not (Test-Path -LiteralPath $js -PathType Leaf) -or -not (Test-Path -LiteralPath $auth -PathType Leaf)){throw 'SOURCES_MISSING'}
+ $deps=Join-Path $PSScriptRoot 'GuardianV64-TocDependencyPreflight.mjs'
+ if(-not (Test-Path -LiteralPath $js -PathType Leaf) -or -not (Test-Path -LiteralPath $auth -PathType Leaf) -or -not (Test-Path -LiteralPath $deps -PathType Leaf)){throw 'SOURCES_MISSING'}
  & node --check $js 2>$null | Out-Null
  if($LASTEXITCODE -ne 0){throw 'SOURCE_PARSE_FAILED'}
+ & node --check $deps 2>$null | Out-Null
+ if($LASTEXITCODE -ne 0){throw 'DEPENDENCY_PARSE_FAILED'}
  $found=New-Object 'System.Collections.Generic.List[string]'
  $seen=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
  $checked=0
