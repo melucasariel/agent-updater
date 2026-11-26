@@ -2,7 +2,7 @@
 // Guardian V6.8: conservative TABLE vs TABLE DATA TOC pairing in authenticated memory.
 // Only fixed counters leave this function. No names, IDs, schemas, owners or hashes leave.
 import {auditTocShape} from './GuardianV65-TocShapeRiskAudit.mjs';
-const SIMPLE=/^([A-Za-z_][A-Za-z_0-9$]{0,127}) ([A-Za-z_][A-Za-z_0-9$]{0,127}) (?:-|[A-Za-z_][A-Za-z_0-9$-]{0,127})$/;
+const SIMPLE=/^([A-Za-z_][A-Za-z_0-9$]{0,127}) ([A-Za-z_][A-Za-z_0-9$]{0,127}) (-|[A-Za-z_][A-Za-z_0-9$-]{0,127})$/;
 const MARK=/^\s*\d+;\s+\d+\s+\d+\s+(.+)$/;
 export function auditTocTableDataPairs(toc){
  const base=auditTocShape(toc);
