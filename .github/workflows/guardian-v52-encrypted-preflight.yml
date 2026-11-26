@@ -1,0 +1,35 @@
+name: Guardian V5.2 encrypted archive preflight and lesson regression
+on:
+  push:
+    paths:
+      - scripts/GuardianV52-EncryptedRecoveryInput.mjs
+      - scripts/test-GuardianV52-EncryptedRecoveryInput.mjs
+      - .github/workflows/guardian-v52-encrypted-preflight.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV52-EncryptedRecoveryInput.mjs
+      - scripts/test-GuardianV52-EncryptedRecoveryInput.mjs
+      - .github/workflows/guardian-v52-encrypted-preflight.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert encrypted header, independent stage, copies and corruption handling
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV52-EncryptedRecoveryInput.mjs
+          if($LASTEXITCODE -ne 0){throw 'Node parse'}
+          node scripts/test-GuardianV52-EncryptedRecoveryInput.mjs
+          if($LASTEXITCODE -ne 0){throw 'Synthetic test failed'}
+          $failure=@(node scripts/GuardianV52-EncryptedRecoveryInput.mjs --archive invalid)
+          if($LASTEXITCODE -ne 2 -or ($failure -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Must fail closed'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V52_NO_REAL_BACKUP_NO_SECRETS=PASS'

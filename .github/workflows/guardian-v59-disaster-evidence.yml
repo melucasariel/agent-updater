@@ -1,0 +1,35 @@
+name: Guardian V5.9 disaster evidence package gate
+on:
+  push:
+    paths:
+      - scripts/GuardianV59-DisasterEvidence.mjs
+      - scripts/test-GuardianV59-DisasterEvidence.mjs
+      - .github/workflows/guardian-v59-disaster-evidence.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV59-DisasterEvidence.mjs
+      - scripts/test-GuardianV59-DisasterEvidence.mjs
+      - .github/workflows/guardian-v59-disaster-evidence.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fail-closed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic 7-component stage, globals evidence, hash tamper and missing-vault rejection
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV59-DisasterEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'Parse failed'}
+          node scripts/test-GuardianV59-DisasterEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'V59 synthetic gate failed'}
+          $bad=@(node scripts/GuardianV59-DisasterEvidence.mjs --config invalid)
+          if($LASTEXITCODE -ne 2 -or ($bad -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'CLI fail-closed missing'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V59_OFFLINE_NO_REAL_BACKUP=PASS'

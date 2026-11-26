@@ -1,0 +1,35 @@
+name: Guardian V6.0 signed backup trust
+on:
+  push:
+    paths:
+      - scripts/GuardianV60-SignedBundleTrust.mjs
+      - scripts/test-GuardianV60-SignedBundleTrust.mjs
+      - .github/workflows/guardian-v60-signed-trust.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV60-SignedBundleTrust.mjs
+      - scripts/test-GuardianV60-SignedBundleTrust.mjs
+      - .github/workflows/guardian-v60-signed-trust.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-bundle-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Signed seven-part bundle and external vault, tampered files and wrong signer
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV60-SignedBundleTrust.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failed'}
+          node scripts/test-GuardianV60-SignedBundleTrust.mjs
+          if($LASTEXITCODE -ne 0){throw 'Signature fixture failed'}
+          $err=@(node scripts/GuardianV60-SignedBundleTrust.mjs --real-backup unspecified)
+          if($LASTEXITCODE -ne 2 -or ($err -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unexpected CLI behavior'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V60_OFFLINE_UNSIGNED_OR_UNTRUSTED_BUNDLE_BLOCKED=PASS'

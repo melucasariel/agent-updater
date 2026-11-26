@@ -1,0 +1,71 @@
+name: Guardian V5.1 PG17 disposable restore
+on:
+  push:
+    paths:
+      - scripts/GuardianV51-DisposablePgRestore.mjs
+      - .github/workflows/guardian-v51-disposable-restore.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV51-DisposablePgRestore.mjs
+      - .github/workflows/guardian-v51-disposable-restore.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restore-synthetic-PG17:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated synthetic custom-format dump; restore in isolated disposable PG17
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/GuardianV51-DisposablePgRestore.mjs
+          docker pull postgres:17 >/dev/null
+          lab=$(mktemp -d)
+          src=r62v51_ci_source_$RANDOM
+          net=r62v51_ci_net_$RANDOM
+          docker network create --internal "$net" >/dev/null
+          trap 'docker rm -f "$src" >/dev/null 2>&1 || true; docker network rm "$net" >/dev/null 2>&1 || true; rm -rf "$lab"' EXIT
+          docker run -d --name "$src" --network "$net" -e POSTGRES_PASSWORD=synthetic_ci_password -e POSTGRES_DB=fixture postgres:17 >/dev/null
+          for i in $(seq 1 40); do
+            if docker exec --user postgres "$src" pg_isready -U postgres -d fixture >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          docker exec --user postgres "$src" psql -X -q -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE TABLE public.synthetic_events(id integer PRIMARY KEY, state text NOT NULL); INSERT INTO public.synthetic_events VALUES(1,'TEST_ONLY'); CREATE INDEX synthetic_events_state_idx ON public.synthetic_events(state); ALTER TABLE public.synthetic_events ENABLE ROW LEVEL SECURITY; CREATE POLICY synthetic_read ON public.synthetic_events FOR SELECT USING (true);"
+          docker exec --user postgres "$src" pg_dump -Fc -U postgres -d fixture >"$lab/fixture.dump"
+          printf 'ROTA62_OFFLINE_LAB_V1\n' >"$lab/.rota62-guardian-lab-only"
+          sha=$(sha256sum "$lab/fixture.dump" | cut -d' ' -f1)
+          node scripts/GuardianV51-DisposablePgRestore.mjs --mode plan --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 "$sha" --expected-tables 1 | tee "$lab/plan.txt"
+          grep -q 'POSTGRES17_RESTORED=NO' "$lab/plan.txt"
+          node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 "$sha" --expected-tables 1 | tee "$lab/result.txt"
+          grep -q 'POSTGRES17_RESTORED=YES' "$lab/result.txt"
+          grep -q 'RESTORED_TABLES=1' "$lab/result.txt"
+          grep -q 'RESTORED_POLICIES=1' "$lab/result.txt"
+          grep -q 'RESTORED_RLS_TABLES=1' "$lab/result.txt"
+          grep -q 'RESTORED_INDEXES=2' "$lab/result.txt"
+          grep -q 'DOCKER_RESOURCES_CLEANED=YES' "$lab/result.txt"
+          if node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 0000000000000000000000000000000000000000000000000000000000000000 --expected-tables 1 >"$lab/rejected"; then exit 1; fi
+          grep -q 'BLOCKED_FIXTURE_HASH_MISMATCH' "$lab/rejected"
+          # Missing database roles must abort; never silently discard grants.
+          docker exec --user postgres "$src" psql -X -q -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE ROLE fixture_reader NOLOGIN; GRANT SELECT ON public.synthetic_events TO fixture_reader;"
+          docker exec --user postgres "$src" pg_dump -Fc -U postgres -d fixture >"$lab/fixture.dump"
+          sha_roles=$(sha256sum "$lab/fixture.dump" | cut -d' ' -f1)
+          if node scripts/GuardianV51-DisposablePgRestore.mjs --mode exercise --lab-root "$lab" --fixture-dump "$lab/fixture.dump" --fixture-sha256 "$sha_roles" --expected-tables 1 >"$lab/roles-failed"; then exit 1; fi
+          grep -q 'FAILED_AT=RESTORE_SYNTHETIC_ARCHIVE' "$lab/roles-failed"
+          if docker ps -a --filter label=r62.guardian.lab=disposable-v51 --format '{{.ID}}' | grep -q .; then exit 1; fi
+          echo 'DISPOSABLE_PG17_ACTUAL_RESTORE_AND_CLEANUP=PASS'
+          echo 'MISSING_ROLE_RESTORE_FAILS_CLOSED=PASS'
+  Windows-safety-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows syntax and fail closed without a fixture
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV51-DisposablePgRestore.mjs
+          if($LASTEXITCODE -ne 0){throw 'Parse error'}
+          $out=@(node scripts/GuardianV51-DisposablePgRestore.mjs --mode bad)
+          if($LASTEXITCODE -ne 2 -or ($out -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'CLI did not fail closed'}
+          $global:LASTEXITCODE=0
+          Write-Output 'WINDOWS_V51_FAIL_CLOSED=PASS'

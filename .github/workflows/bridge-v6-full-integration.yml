@@ -1,0 +1,95 @@
+name: Bridge V6 full offline integration
+on:
+  push:
+    paths:
+      - 'scripts/Install-BridgeV6.ps1'
+      - 'scripts/BridgeV6-Operator.ps1'
+      - 'scripts/Receive-BridgeV6.ps1'
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-full-integration.yml'
+  pull_request:
+    paths:
+      - 'scripts/Receive-BridgeV6.ps1'
+      - 'scripts/New-BridgeV6SignedRequest.ps1'
+      - 'scripts/Test-BridgeV6ReplayGuard.ps1'
+      - 'scripts/Verify-BridgeV6Request.ps1'
+      - '.github/workflows/bridge-v6-full-integration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  receiver-offline:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell parse validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $files=@('scripts/Install-BridgeV6.ps1','scripts/BridgeV6-Operator.ps1','scripts/Receive-BridgeV6.ps1','scripts/New-BridgeV6SignedRequest.ps1','scripts/Test-BridgeV6ReplayGuard.ps1','scripts/Verify-BridgeV6Request.ps1')
+          foreach($file in $files){
+            $tokens=$null
+            $errors=$null
+            [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file),[ref]$tokens,[ref]$errors)
+            if($errors.Count -ne 0){throw ('PowerShell parse error in '+$file)}
+          }
+      - name: Installer dry-run and staging checks
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
+          $rsa.PersistKeyInCsp=$false
+          try {
+            $root=Join-Path $env:RUNNER_TEMP 'install-test'
+            [IO.Directory]::CreateDirectory($root)|Out-Null
+            $key=Join-Path $root 'public.xml'
+            $stage=Join-Path $root 'bridge-install'
+            [IO.File]::WriteAllText($key,$rsa.ToXmlString($false))
+            $dry=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage)
+            if($dry -notcontains '[OK] LOCAL_INSTALL_PREFLIGHT_PASSED'){throw 'Dry run failed'}
+            if(Test-Path -LiteralPath (Join-Path $stage 'installed.version')){throw 'Dry run wrote files'}
+            $install=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
+            if($install -notcontains '[OK] BRIDGE_V6_FILES_STAGED'){throw 'Stage failed'}
+            $status=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/BridgeV6-Operator.ps1 -Mode STATUS -InstallDirectory $stage)
+            if(($status -join "`n") -notmatch 'STAGED=True'){throw 'Status missing'}
+            $again=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Install-BridgeV6.ps1 -PinnedPublicKeyPath $key -Destination $stage -Install)
+            if($again -notcontains '[BLOQUEADO] EXISTING_INSTALL_REQUIRES_MIGRATION_REVIEW'){throw 'Overwrite guard failed'}
+            $global:LASTEXITCODE=0
+          } finally {$rsa.Dispose()}
+      - name: Signed request accepted once, replay blocked
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $rsa=New-Object Security.Cryptography.RSACryptoServiceProvider(2048)
+          $rsa.PersistKeyInCsp=$false
+          try {
+            $root=Join-Path $env:RUNNER_TEMP 'bridge-v6-test'
+            [IO.Directory]::CreateDirectory($root) | Out-Null
+            $private=Join-Path $root 'private.xml'
+            $public=Join-Path $root 'public.xml'
+            $request=Join-Path $root 'request.json'
+            $state=Join-Path $root 'state'
+            [IO.File]::WriteAllText($private,$rsa.ToXmlString($true))
+            [IO.File]::WriteAllText($public,$rsa.ToXmlString($false))
+            $signed=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/New-BridgeV6SignedRequest.ps1 -Command AUDIT_PREFLIGHT -PrivateKeyXmlPath $private -OutputPath $request)
+            if($signed -notcontains '[OK] SIGNED_REQUEST_CREATED_NO_NETWORK'){throw 'Signer failed'}
+            $output=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if(($output -join "`n") -notmatch 'AUDIT_SCRIPT_' -or ($output -join "`n") -notmatch 'RECEIVER_STOPPED'){throw 'Signed request did not run expected preflight'}
+            $repeat=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if(($repeat -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Replay not rejected'}
+            $obj=Get-Content -LiteralPath $request -Raw | ConvertFrom-Json
+            # Same request ID with a fresh nonce and valid fresh signature is still a replay.
+            $obj.nonce='independentlynewnonce0123456789'
+            $payload=@('ROTA62-BRIDGE-V6',$obj.protocol_version,$obj.request_id,$obj.command,$obj.issued_at,$obj.expires_at,$obj.nonce) -join "`n"
+            $obj.signature=[Convert]::ToBase64String($rsa.SignData([Text.Encoding]::UTF8.GetBytes($payload),'SHA256'))
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
+            $sameId=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if(($sameId -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Reused request ID with new nonce accepted'}
+            $obj.command='SEMANTICS'
+            $obj | ConvertTo-Json -Compress | Set-Content -LiteralPath $request
+            $unsafe=@(& powershell.exe -NoProfile -NonInteractive -File ./scripts/Receive-BridgeV6.ps1 -PublicKeyPath $public -StateDirectory $state -RequestFile $request -Once)
+            if(($unsafe -join "`n") -notmatch 'REQUEST_REJECTED_OR_ALREADY_PROCESSED'){throw 'Unsafe command not rejected'}
+            $global:LASTEXITCODE=0
+          } finally {$rsa.Dispose()}

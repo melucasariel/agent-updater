@@ -1,0 +1,35 @@
+name: Guardian V5.3 authenticated R62DB02 original-format regression
+on:
+  push:
+    paths:
+      - scripts/GuardianV53-AuthenticateR62DB.mjs
+      - scripts/test-GuardianV53-AuthenticateR62DB.mjs
+      - .github/workflows/guardian-v53-authenticated-decrypt.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV53-AuthenticateR62DB.mjs
+      - scripts/test-GuardianV53-AuthenticateR62DB.mjs
+      - .github/workflows/guardian-v53-authenticated-decrypt.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adversarial-aes-gcm-synthetic:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify original-format R62DB02 with synthetic archive and refuse tampered ciphertext
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV53-AuthenticateR62DB.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax invalid'}
+          node scripts/test-GuardianV53-AuthenticateR62DB.mjs
+          if($LASTEXITCODE -ne 0){throw 'AES-GCM regression invalid'}
+          $failure=@(node scripts/GuardianV53-AuthenticateR62DB.mjs --archive invalid)
+          if($LASTEXITCODE -ne 2 -or ($failure -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Fail closed CLI missing'}
+          $global:LASTEXITCODE=0
+          Write-Output 'R62DB_V53_NO_PRODUCTION_DATA_NO_PASSWORD_INPUT=PASS'

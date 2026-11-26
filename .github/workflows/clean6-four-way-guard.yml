@@ -1,0 +1,79 @@
+name: CLEAN6 guarded four-way audit
+on:
+  push:
+    paths:
+      - scripts/Audit-Clean6FourWay.mjs
+      - scripts/Export-Clean6Catalog.sql
+      - .github/workflows/clean6-four-way-guard.yml
+  pull_request:
+    paths:
+      - scripts/Audit-Clean6FourWay.mjs
+      - scripts/Export-Clean6Catalog.sql
+      - .github/workflows/clean6-four-way-guard.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-regression:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax, object-identity, owner/ACL mutations and guard
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          node --check scripts/Audit-Clean6FourWay.mjs
+          @'
+          import {compare} from './scripts/Audit-Clean6FourWay.mjs';
+          import assert from 'node:assert/strict';
+          const key=JSON.stringify(['relation:pub.t','reader','SELECT','owner',false]);
+          const a={owners:new Map([['schema:pub','owner'],['relation:pub.t','owner']]),acls:new Map([[key,'relation:pub.t']])};
+          const same={owners:new Map(a.owners),acls:new Map(a.acls)};
+          assert.equal(compare(a,same).total,0);
+          same.owners.set('relation:pub.t','other');
+          assert.equal(compare(a,same).changed,1);
+          same.acls.clear();
+          assert.equal(compare(a,same).removedAcl,1);
+          assert.equal(compare(a,same).byType.OWNER_RELATION,1);
+          assert.equal(compare(a,same).byType.ACL_RELATION,1);
+          console.log('FOUR_WAY_IDENTITY_COMPARE=PASS');
+          '@ | Set-Content -Encoding utf8 -Path test-fourway.mjs
+          node test-fourway.mjs
+          if($LASTEXITCODE -ne 0){throw 'Compare regression'}
+          $failure=@(node scripts/Audit-Clean6FourWay.mjs --containers invalid --reference invalid)
+          if($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch 'STATUS=BLOCKED'){throw 'Invalid input not blocked'}
+          $global:LASTEXITCODE=0
+          Write-Output 'INVALID_INPUT_FAIL_CLOSED=PASS'
+  postgres17-isolated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create private disposable internal-network PG17 and audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker network create --internal r62_guard_ci
+          docker volume create r62_guard_ci_db
+          docker run -d --name r62_guard_ci --network r62_guard_ci --mount source=r62_guard_ci_db,target=/var/lib/postgresql/data -e POSTGRES_PASSWORD=synthetic-ci-only -e POSTGRES_DB=clean6_ci postgres:17 >/dev/null
+          trap 'docker rm -f r62_guard_ci >/dev/null 2>&1 || true; docker volume rm r62_guard_ci_db >/dev/null 2>&1 || true; docker network rm r62_guard_ci >/dev/null 2>&1 || true' EXIT
+          stable=0
+          for i in $(seq 1 60); do
+            # pg_isready only proves the server accepts connections; the
+            # POSTGRES_DB initialization can still be incomplete.
+            if docker exec --user postgres r62_guard_ci psql -X -qAt -w -U postgres -d clean6_ci -c "SELECT 1" 2>/dev/null | grep -qx 1; then
+              stable=$((stable+1))
+              if [ "$stable" -ge 3 ]; then break; fi
+            else
+              stable=0
+            fi
+            sleep 1
+          done
+          if [ "$stable" -lt 3 ]; then echo 'CLEAN6_SYNTHETIC_DATABASE_NOT_READY'; exit 1; fi
+          docker exec --user postgres r62_guard_ci psql -U postgres -d clean6_ci -X -v ON_ERROR_STOP=1 -q -c "CREATE SCHEMA fixture; CREATE TABLE fixture.t(id int); CREATE ROLE fixture_reader NOLOGIN; GRANT SELECT ON fixture.t TO fixture_reader;"
+          cid=$(docker inspect --format '{{.Id}}' r62_guard_ci)
+          output=$(node scripts/Audit-Clean6FourWay.mjs --containers "$cid" --reference "$cid" --expected-tables 1 --expected-extensions 0)
+          [[ "$output" == *"STATUS=READ_ONLY_OK"* ]]
+          [[ "$output" == *"DIFFERENCES=0"* ]]
+          [[ "$output" == *"REAL_BACKUP_RECOVERY_VERIFIED=NO"* ]]
+          echo 'ISOLATED_POSTGRES17_FOUR_WAY_GUARD=PASS'
+          echo 'USER_BACKUP_NOT_ACCESSED=YES'

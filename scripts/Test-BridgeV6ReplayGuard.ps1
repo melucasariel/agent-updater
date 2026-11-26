@@ -9,7 +9,7 @@ $ErrorActionPreference='Stop'
 function Block([string]$message){ Write-Output "[BLOQUEADO] $message"; exit 2 }
 try {
  $verify=Join-Path $PSScriptRoot 'Verify-BridgeV6Request.ps1'
- $output=@(& $verify -RequestPath $RequestPath -PinnedPublicKeyPath $PinnedPublicKeyPath)
+ $output=@(& powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $verify -RequestPath $RequestPath -PinnedPublicKeyPath $PinnedPublicKeyPath)
  if($LASTEXITCODE -ne 3 -or $output -notcontains '[OK] REQUEST_SIGNATURE_VERIFIED'){Block 'INVALID_OR_UNAUTHENTICATED_REQUEST'}
  $req=Get-Content -LiteralPath $RequestPath -Raw | ConvertFrom-Json
  $directory=[IO.Path]::GetFullPath($ReplayDirectory)
@@ -18,8 +18,9 @@ try {
  if($id -cnotmatch '^[a-z0-9-]{8,64}$'){Block 'INVALID_REQUEST_ID'}
  $nonce=[string]$req.nonce
  if($nonce -cnotmatch '^[a-zA-Z0-9_-]{16,128}$'){Block 'INVALID_NONCE'}
+ # Reused request IDs are rejected even if a new nonce is signed.
  $sha=[Security.Cryptography.SHA256]::Create()
- $replayKey=([Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("$id|$nonce")))).Replace('/','_').Replace('+','-').TrimEnd('=')
+ $replayKey=([Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("ROTA62-V6-REQUEST-ID|$id")))).Replace('/','_').Replace('+','-').TrimEnd('=')
  $sha.Dispose()
  $file=Join-Path $directory ($replayKey+'.seen')
  # Atomic creation: a successful open is a reservation, and any existing file denies replay.

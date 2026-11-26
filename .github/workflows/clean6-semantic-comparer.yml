@@ -1,0 +1,49 @@
+name: CLEAN6 semantic manifest offline comparer CI
+on:
+  push:
+    paths:
+      - 'scripts/Compare-Clean6Semantics.mjs'
+      - '.github/workflows/clean6-semantic-comparer.yml'
+  pull_request:
+    paths:
+      - 'scripts/Compare-Clean6Semantics.mjs'
+      - '.github/workflows/clean6-semantic-comparer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic 185 owners and 595 ACLs with negative mutations
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          node --check ./scripts/Compare-Clean6Semantics.mjs
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-offline-synthetic'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          $a=@{format='r62-clean6-semantic-v1';owners=@(1..185|%{ @{id="obj$_";owner='postgres'} });acls=@(1..595|%{ @{id="obj$_";grantee='service_role';privilege='SELECT';grantor='postgres';grantable=$false} })}
+          $expected=Join-Path $root 'expected.json'
+          $actual=Join-Path $root 'actual.json'
+          $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $expected
+          $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $actual
+          $ok=@(node ./scripts/Compare-Clean6Semantics.mjs --expected $expected --actual $actual)
+          if($LASTEXITCODE -ne 0 -or ($ok -join "`n") -notmatch 'RESULT=OFFLINE_MANIFESTS_MATCH_UNVERIFIED_PROVENANCE'){throw 'Expected exact-match success'}
+          if(($ok -join "`n") -match 'service_role|postgres|obj1'){throw 'Identifier leaked'}
+          $a.owners[0].owner='changed'
+          $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $actual
+          $bad=@(node ./scripts/Compare-Clean6Semantics.mjs --expected $expected --actual $actual)
+          if($LASTEXITCODE -eq 0 -or ($bad -join "`n") -notmatch 'CHANGED_OWNERS=1'){throw 'Owner tampering was not detected'}
+          $a.owners[0].owner='postgres'
+          $a.acls[0].grantable=$true
+          $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $actual
+          $bad=@(node ./scripts/Compare-Clean6Semantics.mjs --expected $expected --actual $actual)
+          if($LASTEXITCODE -eq 0 -or ($bad -join "`n") -notmatch 'MISSING_ACLS=1'){throw 'ACL mutation was not detected'}
+          $a.acls[0].grantable=$false
+          $a.acls=$a.acls[1..594]
+          $a | ConvertTo-Json -Depth 8 -Compress | Set-Content -LiteralPath $actual
+          $bad=@(node ./scripts/Compare-Clean6Semantics.mjs --expected $expected --actual $actual)
+          if($LASTEXITCODE -eq 0 -or ($bad -join "`n") -notmatch 'MISSING_ACLS=1'){throw 'ACL deletion was not detected'}
+          $global:LASTEXITCODE=0
+          Write-Output 'Synthetic exact, owner-change, ACL-change, ACL-deletion tests passed.'

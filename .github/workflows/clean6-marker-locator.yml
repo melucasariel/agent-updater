@@ -1,0 +1,34 @@
+name: CLEAN6 marker locator CI
+on:
+  push:
+    paths:
+      - 'scripts/Locate-Clean6ErrorMarkers.ps1'
+      - '.github/workflows/clean6-marker-locator.yml'
+  pull_request:
+    paths:
+      - 'scripts/Locate-Clean6ErrorMarkers.ps1'
+      - '.github/workflows/clean6-marker-locator.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and test synthetic CLEAN6 diagnostic marker
+        shell: powershell
+        run: |
+          $t=$null; $e=$null
+          [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/Locate-Clean6ErrorMarkers.ps1),[ref]$t,[ref]$e)
+          if($e.Count -gt 0){throw 'Invalid PowerShell syntax'}
+          $root=Join-Path $env:RUNNER_TEMP 'clean6-marker-fixture'
+          [IO.Directory]::CreateDirectory($root)|Out-Null
+          [IO.File]::WriteAllText((Join-Path $root 'candidate.mjs'),'const marker = "LOCAL_ERROR_REDACTED";')
+          [IO.File]::WriteAllText((Join-Path $root 'ignore.txt'),'PASSWORD_ENTRY_BEGIN')
+          $report=@(& ./scripts/Locate-Clean6ErrorMarkers.ps1 -SearchRoot $root -MaxFiles 10 -NoClipboard)
+          $joined=$report -join "`n"
+          foreach($expected in @('FILES_MATCHED=1','FILES_SCANNED=1','MATCH_1_MARKERS=LOCAL_ERROR_REDACTED','FILE_NAMES_PATHS_CONTENTS_REDACTED=YES','AUDIT_NOT_EXECUTED=YES','END_REPORT_OK')){
+            if(-not $joined.Contains($expected)){throw ('Missing marker '+$expected)}
+          }
+          if($joined.Contains($root) -or $joined.Contains('candidate.mjs')){throw 'Path leak'}

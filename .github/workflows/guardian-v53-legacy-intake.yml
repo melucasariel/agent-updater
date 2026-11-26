@@ -1,0 +1,45 @@
+name: Guardian V5.3 legacy decryptor intake safe regression
+on:
+  push:
+    paths:
+      - scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1
+      - .github/workflows/guardian-v53-legacy-intake.yml
+  pull_request:
+    paths:
+      - scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1
+      - .github/workflows/guardian-v53-legacy-intake.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PS1 and classify synthetic restore source markers without executing source
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $tok=$null;$errors=$null
+          [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1),[ref]$tok,[ref]$errors)
+          if($errors.Count){throw 'PowerShell parser invalid'}
+          $tempRoot=Join-Path $env:RUNNER_TEMP 'r62-v53-synthetic'
+          New-Item -ItemType Directory -Path $tempRoot -Force|Out-Null
+          @'
+          // SYNTHETIC FIXTURE ONLY, never execute.
+          // Marker used for crypto source discovery: scrypt and aes-256-gcm.
+          // Example: pg_restore --no-owner --no-privileges;
+          // Internal test text intentionally longer than 64 bytes and has no secrets.
+          '@|Set-Content -LiteralPath (Join-Path $tempRoot 'backup-postgres.mjs') -Encoding UTF8
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zipFile=Join-Path $env:RUNNER_TEMP 'legacy-synthetic.zip'
+          [IO.Compression.ZipFile]::CreateFromDirectory($tempRoot,$zipFile)
+          Copy-Item -LiteralPath $zipFile -Destination (Join-Path $tempRoot 'legacy-synthetic.zip')
+          $out=@(& ./scripts/Invoke-GuardianV53-LegacyRestoreIntake.ps1 -SearchRoots @($tempRoot) -NoClipboard)
+          $txt=$out -join [Environment]::NewLine
+          if($txt -notmatch 'LEGACY_CANDIDATE_FILES=1'){throw 'Candidate missing'}
+          if($txt -notmatch 'LEGACY_1_HAS_AES_GCM=TRUE'){throw 'GCM marker missing'}
+          if($txt -notmatch 'ZIP_EMBEDDED_SOURCE_MATCHES=1'){throw 'ZIP source missing'}
+          if($txt -notmatch 'LEGACY_1_OWNERSHIP_ACL_OMISSION_RISK=TRUE'){throw 'Risk marker missing'}
+          if($txt -notmatch 'SOURCE_EXECUTED=NO'){throw 'Unsafe report'}
+          Write-Output 'V53_LEGACY_SOURCE_DISCOVERY_SYNTHETIC=PASS'

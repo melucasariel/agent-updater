@@ -1,0 +1,167 @@
+import assert from 'node:assert/strict';
+import {parseSafeReport,readiness} from './GuardianV55-RecoveryPreflight.mjs';
+// Synthetic, public-category totals only; no original TOC object names or user data.
+const toc={
+ ACL:210,COMMENT:41,CONSTRAINT:93,DEFAULT_ACL:27,EXTENSION:6,FK_CONSTRAINT:56,
+ FUNCTION:87,INDEX:128,OTHER:13,POLICY:8,ROW_SECURITY:52,SCHEMA:8,
+ SEQUENCE:3,SEQUENCE_OWNED_BY:2,SEQUENCE_SET:5,TABLE:77,TABLE_DATA:73,
+ TRIGGER:15,TYPE:15
+};
+const begin='=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===';
+const lines=[begin,'CIPHERTEXT_SHA256_MATCH=YES','AES_GCM_TAG_AUTHENTICATED=YES',
+ 'LOCAL_PG17_IMAGE_VERIFIED=YES','DECRYPTED_PG_CUSTOM_HEADER=YES','PG_RESTORE_CATALOG=PASS',
+ 'ARCHIVE_CONTENT_SHA16=EA995E37864FF769','ARCHIVE_CATALOG_ITEMS=919',
+ ...Object.entries(toc).map(([k,v])=>('TOC_'+k+'='+v)),
+ 'EXPECTED_USER_TABLES_REFERENCE=76',
+ 'CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES','PG_RESTORE_EXECUTED_SQL=NO',
+ 'DATABASE_RESTORED=NO','ROLES_ACL_RESTORED=NO',
+ 'ARCHIVE_PLAINTEXT_FILE_WRITTEN=NO','PRODUCTION_TOUCHED=NO',
+ 'RTO_4_TO_6_HOURS_PROVEN=NO','END_REPORT_OK'];
+const good=lines.join('\n')+'\n';
+const extra=[
+ 'DEPENDENCY_VISIBLE_OWNER_ROLES=5',
+ 'DEPENDENCY_DISTINCT_EXTENSIONS=6',
+ 'DEPENDENCY_UNCLASSIFIED_TOC_ENTRIES=13',
+ 'DEPENDENCY_AMBIGUOUS_TOC_OWNER_ENTRIES=0',
+ 'DEPENDENCY_SHA16=EA995E37864FF769',
+ 'DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO'
+];
+const enhanced=good.replace('END_REPORT_OK',extra.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(enhanced).items,919);
+assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_DISTINCT_EXTENSIONS=6','DEPENDENCY_DISTINCT_EXTENSIONS=999')),e=>e.message==='DEPENDENCY_COUNTER_INCONSISTENT');
+assert.equal(parseSafeReport(good).items,919);
+const shape=[
+ 'SHAPE_RECOGNIZED_TYPES=910',
+ 'SHAPE_UNRECOGNIZED_TYPES=9',
+ 'SHAPE_NO_OWNER_PROOF_ITEMS=600',
+ 'SHAPE_OWNER_CANDIDATE_ONLY_ITEMS=310',
+ 'SHAPE_NONSTANDARD_LAST_TOKENS=1',
+ 'SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'
+];
+const v65=enhanced.replace('END_REPORT_OK',shape.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v65).items,919);
+const blind=[
+ 'BLIND_KNOWN_PUBLIC_KIND_ITEMS=5',
+ 'BLIND_OTHER_UNKNOWN_SHAPES=4',
+ 'BLIND_NONSTANDARD_CANDIDATE_ITEMS=1',
+ 'BLIND_NONSTANDARD_NO_PROOF_ITEMS=0',
+ 'BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'
+];
+const v66=v65.replace('END_REPORT_OK',blind.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v66).items,919);
+const scope=[
+ 'SCOPE_PUBLIC_SCHEMA_TABLES=70',
+ 'SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=6',
+ 'SCOPE_NO_SCHEMA_TABLES=0',
+ 'SCOPE_COMPLEX_SCHEMA_TABLES=1',
+ 'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO'
+];
+const v67=v66.replace('END_REPORT_OK',scope.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v67).items,919);
+const pairs=[
+ 'AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA',
+ 'PAIR_STRUCTURALLY_MATCHED=70',
+ 'PAIR_UNPAIRED_SIMPLE_TABLE=6',
+ 'PAIR_UNPAIRED_SIMPLE_DATA=1',
+ 'PAIR_AMBIGUOUS_TABLE=1',
+ 'PAIR_AMBIGUOUS_DATA=2',
+ 'PAIR_DUPLICATE_NONUNIQUE=0',
+ 'PAIR_ROWS_VERIFIED=NO'
+];
+const v68=v67.replace('END_REPORT_OK',pairs.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(v68).items,919);
+
+const oidLines=[
+ 'PAIR_OID_MATCHED=70',
+ 'PAIR_OID_TABLE_ONLY=6',
+ 'PAIR_OID_DATA_ONLY=1',
+ 'PAIR_OID_DUPLICATE_TABLE=0',
+ 'PAIR_OID_DUPLICATE_DATA=0',
+ 'PAIR_OID_INVALID_TABLE=1',
+ 'PAIR_OID_INVALID_DATA=2'
+];
+const oidReport=v68.replace('END_REPORT_OK',oidLines.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(oidReport).items,919);
+assert.throws(()=>parseSafeReport(oidReport.replace('PAIR_OID_TABLE_ONLY=6','PAIR_OID_TABLE_ONLY=5')),
+ e=>e.message==='PAIR_OID_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(oidReport.replace('PAIR_OID_DATA_ONLY=1\n','')),
+ e=>e.message==='PAIR_OID_REPORT_INCOMPLETE');
+
+
+const detailedReasons=[
+ 'PAIR_REASON_TABLE_QUOTED=1',
+ 'PAIR_REASON_TABLE_UNICODE=0',
+ 'PAIR_REASON_TABLE_OTHER=0',
+ 'PAIR_REASON_TABLE_ONLY=5',
+ 'PAIR_REASON_DATA_ONLY=0',
+ 'PAIR_REASON_OWNER_TABLE=1',
+ 'PAIR_REASON_OWNER_DATA=1',
+ 'PAIR_REASON_NONUNIQUE_TABLE=0',
+ 'PAIR_REASON_NONUNIQUE_DATA=0'
+];
+const withReasons=v68.replace('END_REPORT_OK',detailedReasons.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(withReasons).items,919);
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_TABLE_ONLY=5','PAIR_REASON_TABLE_ONLY=4')),
+ e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_OWNER_DATA=1','PAIR_REASON_OWNER_DATA=0')),
+ e=>e.message==='PAIR_REASON_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(withReasons.replace('PAIR_REASON_TABLE_UNICODE=0\n','')),
+ e=>e.message==='PAIR_REASONS_INCOMPLETE');
+assert.equal(parseSafeReport(v68).items,919); // Older V6.8 reports still valid.
+
+assert.equal(parseSafeReport(v67).items,919); // V6.7 backward compatibility.
+assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA','AUDIT_PROFILE=V68_DATA_PROVEN')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_DUPLICATE_NONUNIQUE=0','PAIR_DUPLICATE_NONUNIQUE=1')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v67.replace('END_REPORT_OK','AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA\nEND_REPORT_OK')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_STRUCTURALLY_MATCHED=70','PAIR_STRUCTURALLY_MATCHED=69')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_ROWS_VERIFIED=NO','PAIR_ROWS_VERIFIED=YES')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_AMBIGUOUS_DATA=2\n','')),e=>e.message==='PAIR_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v68.replace('PAIR_DUPLICATE_NONUNIQUE=0','PAIR_DUPLICATE_NONUNIQUE=999')),e=>e.message==='PAIR_COUNTER_INCONSISTENT');
+
+assert.throws(()=>parseSafeReport(v67.replace('SCOPE_PUBLIC_SCHEMA_TABLES=70','SCOPE_PUBLIC_SCHEMA_TABLES=69')),e=>e.message==='SCOPE_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v67.replace('SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO','SCOPE_ORIGINAL_USER_TABLES_VALIDATED=YES')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v67.replace('SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=6\n','')),e=>e.message==='SCOPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_OTHER_UNKNOWN_SHAPES=4','BLIND_OTHER_UNKNOWN_SHAPES=3')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_NONSTANDARD_CANDIDATE_ITEMS=1','BLIND_NONSTANDARD_CANDIDATE_ITEMS=0')),e=>e.message==='BLIND_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='BLIND_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v66.replace('BLIND_OTHER_UNKNOWN_SHAPES=4\n','')),e=>e.message==='BLIND_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_RECOGNIZED_TYPES=910','SHAPE_RECOGNIZED_TYPES=911')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_NO_OWNER_PROOF_ITEMS=600','SHAPE_NO_OWNER_PROOF_ITEMS=601')),e=>e.message==='SHAPE_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO','SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=YES')),e=>e.message==='SHAPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(v65.replace('SHAPE_NONSTANDARD_LAST_TOKENS=1\n','')),e=>e.message==='SHAPE_REPORT_INCOMPLETE');
+assert.throws(()=>parseSafeReport(enhanced.replace('DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO','DEPENDENCY_ROLE_GRANTEES_COMPLETE=YES')),e=>e.message==='REPORT_LIMIT_MISSING');
+const p=parseSafeReport(good);
+assert.equal(p.items,919);
+assert.equal(p.counts.TABLE,77);
+assert.equal(p.counts.TABLE_DATA,73);
+assert.equal(p.referenceTables,76);
+const r=readiness(p);
+assert.equal(r.tableDelta,1);
+assert.equal(r.signal.tableScopeReview,true);
+assert.equal(r.signal.defaultPrivileges,true);
+assert.equal(r.signal.unknownTocType,true);
+assert.ok(r.conditions.includes('REQUIRE_OFFICIAL_GLOBAL_ROLES_DUMP'));
+assert.ok(r.conditions.includes('REQUIRE_OWNER_ACL_DEFAULT_ACL_REPLAY_CHECK'));
+assert.ok(r.conditions.includes('REQUIRE_UNCLASSIFIED_TOC_REVIEW'));
+const invalid=(src,from,to)=>src.replace(from,to);
+const bad=[
+ [invalid(good,'AES_GCM_TAG_AUTHENTICATED=YES','AES_GCM_TAG_AUTHENTICATED=NO'),'UNVERIFIED_AUTH_OR_CATALOG'],
+ [invalid(good,'ARCHIVE_CATALOG_ITEMS=919','ARCHIVE_CATALOG_ITEMS=918'),'TOC_TOTAL_INCONSISTENT'],
+ [invalid(good,'PRODUCTION_TOUCHED=NO','PRODUCTION_TOUCHED=YES'),'UNEXPECTED_RESTORE_OR_PRODUCTION'],
+ [invalid(good,'TOC_DEFAULT_ACL=27','TOC_DEFAULT_ACL=ABC'),'MISSING_OR_INVALID_COUNT'],
+ [invalid(good,'END_REPORT_OK','END_REPORT_FAIL'),'REPORT_ENVELOPE_INVALID'],
+ [invalid(good,'TOC_INDEX=128','TOC_INDEX=128\nTOC_INDEX=128'),'REPORT_LINE_INVALID'],
+ [invalid(good,'ARCHIVE_CONTENT_SHA16=EA995E37864FF769','ARCHIVE_CONTENT_SHA16=INVALID'),'FINGERPRINT_INVALID'],
+ [invalid(good,'TOC_TABLE=77','TOC_TABLE=78'),'TOC_TOTAL_INCONSISTENT']
+];
+for(const [txt,code] of bad)assert.throws(()=>parseSafeReport(txt),e=>e.message===code,'Expected '+code);
+console.log('V68_PAIR_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
+console.log('V67_SCOPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
+console.log('V66_BLIND_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
+console.log('V65_SHAPE_REPORT_OPTIONAL_BACKCOMPAT_AND_FAIL_CLOSED=PASS');
+console.log('V55_AUTHENTICATED_REPORT_STRICT_PARSE=PASS');
+console.log('V55_TABLE_SCOPE_77_VS_76_REQUIRES_REVIEW=PASS');
+console.log('V55_UNCLASSIFIED_ROLES_ACL_TRIGGER_REQUIRE_GATES=PASS');
+console.log('V55_CORRUPT_REPLAY_OR_PRODUCTION_FLAG_REJECTED=PASS');
+console.log('V55_SENSITIVE_SOURCE_NAMES_OR_DATA_USED=NO');

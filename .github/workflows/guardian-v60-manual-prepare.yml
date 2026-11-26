@@ -1,0 +1,35 @@
+name: Guardian V6.0 atomic offline backup preparation
+on:
+  push:
+    paths:
+      - scripts/GuardianV60-PrepareOfflineBundle.mjs
+      - scripts/test-GuardianV60-PrepareOfflineBundle.mjs
+      - .github/workflows/guardian-v60-manual-prepare.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV60-PrepareOfflineBundle.mjs
+      - scripts/test-GuardianV60-PrepareOfflineBundle.mjs
+      - .github/workflows/guardian-v60-manual-prepare.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-atomic-preparation:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Atomic 7 artifact staging and external vault plus corruption fail-closed
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV60-PrepareOfflineBundle.mjs
+          if($LASTEXITCODE -ne 0){throw 'Parse error'}
+          node scripts/test-GuardianV60-PrepareOfflineBundle.mjs
+          if($LASTEXITCODE -ne 0){throw 'Atomic bundle fixture failed'}
+          $blocked=@(node scripts/GuardianV60-PrepareOfflineBundle.mjs --unknown x)
+          if($LASTEXITCODE -ne 2 -or ($blocked -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unsafe CLI behavior'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V60_OFFLINE_PREPARED_ONLY=PASS'

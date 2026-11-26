@@ -1,0 +1,34 @@
+name: Guardian V5.7 semantic owner ACL catalog verifier
+on:
+  push:
+    paths:
+      - scripts/GuardianV57-CompareCatalog.mjs
+      - scripts/test-GuardianV57-CompareCatalog.mjs
+      - .github/workflows/guardian-v57-catalog-compare.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV57-CompareCatalog.mjs
+      - scripts/test-GuardianV57-CompareCatalog.mjs
+      - .github/workflows/guardian-v57-catalog-compare.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-no-secret:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate normalized read-only fingerprint tool, semantic ACL fault and block malformed input
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV57-CompareCatalog.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax error'}
+          node scripts/test-GuardianV57-CompareCatalog.mjs
+          if($LASTEXITCODE -ne 0){throw 'Synthetic semantic check failed'}
+          $failure=@(node scripts/GuardianV57-CompareCatalog.mjs --source missing)
+          if($LASTEXITCODE -ne 2 -or ($failure -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Must fail closed'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V57_READ_ONLY_NO_PRIVATE_CATALOG=PASS'

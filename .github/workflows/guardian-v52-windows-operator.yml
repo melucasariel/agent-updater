@@ -1,0 +1,40 @@
+name: Guardian V5.2 Windows one-enter operator smoke test
+on:
+  push:
+    paths:
+      - scripts/Invoke-GuardianV52.ps1
+      - scripts/GuardianV52-EncryptedRecoveryInput.mjs
+      - .github/workflows/guardian-v52-windows-operator.yml
+  pull_request:
+    paths:
+      - scripts/Invoke-GuardianV52.ps1
+      - scripts/GuardianV52-EncryptedRecoveryInput.mjs
+      - .github/workflows/guardian-v52-windows-operator.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-synthetic:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run synthetic archive discovery, hash verification and sanitized report
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $tok=$null; $errors=$null
+          [void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/Invoke-GuardianV52.ps1),[ref]$tok,[ref]$errors)
+          if($errors.Count){throw 'PowerShell parser failed'}
+          $tmp=Join-Path $env:RUNNER_TEMP 'r62-v52-win-fixtures'
+          New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+          $f=Join-Path $tmp 'synthetic.r62db'
+          $data=[Text.Encoding]::ASCII.GetBytes('R62DB02_SYNTHETIC_CONTENT_NOT_A_REAL_BACKUP_0001')
+          [IO.File]::WriteAllBytes($f,$data)
+          $hash=(Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash
+          $out=@(& ./scripts/Invoke-GuardianV52.ps1 -ExpectedSha256 $hash -SearchRoots @($tmp) -NoClipboard)
+          $full=$out -join "`n"
+          Write-Output $full
+          if($full -notmatch 'MATCHING_CIPHERTEXT_COPIES=1' -or $full -notmatch 'AUDIT_EXIT=SUCCESS' -or $full -notmatch 'CRYPTOGRAPHIC_AUTHENTICATION_PERFORMED=NO'){throw 'One-enter expected outcome failure'}
+          $bad=@(& ./scripts/Invoke-GuardianV52.ps1 -ExpectedSha256 ('0'*64) -SearchRoots @($tmp) -NoClipboard)
+          if(($bad -join ' ') -notmatch 'STATUS=BLOCKED_REDACTED'){throw 'Incorrect expected hash must block'}
+          Write-Output 'GUARDIAN_V52_ONE_ENTER_SYNTHETIC_WINDOWS=PASS'

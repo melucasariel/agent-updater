@@ -1,0 +1,123 @@
+name: Guardian V5.4 authenticated archive TOC in networkless PG17
+on:
+  push:
+    paths:
+      - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/GuardianV67-TableScopeAudit.mjs
+      - scripts/test-GuardianV67-TableScopeAudit.mjs
+      - scripts/GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-TocUtf8.mjs
+      - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+      - scripts/test-GuardianV69-PatchGate.mjs
+      - .github/workflows/guardian-v54-catalog.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV54-ArchiveCatalog.mjs
+      - scripts/GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+      - scripts/GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/test-GuardianV66-TocBlindSpotAudit.mjs
+      - scripts/GuardianV67-TableScopeAudit.mjs
+      - scripts/test-GuardianV67-TableScopeAudit.mjs
+      - scripts/GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV68-TableDataPairAudit.mjs
+      - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-TocUtf8.mjs
+      - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+      - scripts/test-GuardianV69-PatchGate.mjs
+      - .github/workflows/guardian-v54-catalog.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-synthetic-toc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create real synthetic PG17 custom dump, validate AES-GCM and no-network pg_restore TOC
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/test-GuardianV54-TocUtf8.mjs
+          node scripts/test-GuardianV69-PatchGate.mjs
+          node --check scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+          node --check scripts/GuardianV54-ArchiveCatalog.mjs
+          docker pull postgres:17 >/dev/null
+          src=guardian_v54_synthetic_$$
+          root=$(mktemp -d)
+          trap 'docker rm -f "$src" >/dev/null 2>&1 || true; rm -rf "$root"' EXIT
+          docker run -d --name "$src" --network none -e POSTGRES_PASSWORD=ci_synthetic_only -e POSTGRES_DB=fixture postgres:17 >/dev/null
+          for i in $(seq 1 50); do
+            if docker exec --user postgres "$src" psql -X -qAt -w -U postgres -d fixture -c 'SELECT 1' 2>/dev/null | grep -qx 1; then break; fi
+            sleep 1
+          done
+          docker exec --user postgres "$src" psql -X -q -w -U postgres -d fixture -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE TABLE public.events(id integer PRIMARY KEY, state text); INSERT INTO public.events VALUES (1, 'SYNTHETIC'); CREATE INDEX events_state_idx ON public.events(state); ALTER TABLE public.events ENABLE ROW LEVEL SECURITY; CREATE POLICY events_read ON public.events FOR SELECT USING (true); CREATE TABLE public.partition_parent (id integer, state text) PARTITION BY RANGE (id); CREATE TABLE public.partition_child PARTITION OF public.partition_parent FOR VALUES FROM (0) TO (100); INSERT INTO public.partition_parent VALUES (12, 'PARTITION'); CREATE TABLE public.fixture_empty (id integer);"
+          docker exec --user postgres "$src" pg_dump -Fc -w -U postgres -d fixture > "$root/synthetic.dump"
+          docker rm -f "$src" >/dev/null
+          docker tag postgres:17 postgres:17-alpine
+          docker image rm postgres:17 >/dev/null
+          if docker image inspect postgres:17 >/dev/null 2>&1; then echo "Exact tag unexpectedly present"; exit 1; fi
+          # Independent real pg_restore listing: extension has an object name
+          # but no role owner token in PG17's custom archive TOC.
+          docker run --rm -i --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint pg_restore postgres:17-alpine --list < "$root/synthetic.dump" > "$root/toc"
+          node scripts/test-GuardianV64-TocDependencyPreflight.mjs
+          node --check scripts/GuardianV65-TocShapeRiskAudit.mjs
+          node scripts/test-GuardianV65-TocShapeRiskAudit.mjs
+          node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
+          node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
+          node --check scripts/GuardianV67-TableScopeAudit.mjs
+          node scripts/test-GuardianV67-TableScopeAudit.mjs
+          node --check scripts/GuardianV68-TableDataPairAudit.mjs
+          node scripts/test-GuardianV68-TableDataPairAudit.mjs
+          node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
+          node scripts/test-GuardianV69-PatchGate.mjs
+          node scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs "$root/synthetic.dump"
+          # Re-run authenticated synthetic integration when NONE of the
+          # hardcoded tags exists. Only the discovered custom local name works.
+          docker tag postgres:17-alpine guardian-ci/postgres:17.12-local
+          docker image rm postgres:17-alpine >/dev/null
+          if docker image inspect postgres:17-alpine >/dev/null 2>&1; then
+            echo "Prior fallback tag unexpectedly present"; exit 1
+          fi
+          node scripts/test-GuardianV54-ArchiveCatalog.mjs "$root/synthetic.dump"
+          echo "PG17_IMAGE_DISCOVERED_WITH_CUSTOM_LOCAL_TAG=PASS"
+          echo "PG17_LOCAL_ALTERNATE_IMAGE_FALLBACK=PASS"
+          if docker ps -a --filter label=r62.guardian.v54=no-database --format '{{.ID}}' | grep -q .; then exit 1; fi
+          echo 'V54_DOCKER_NETWORKLESS_PG_RESTORE_LIST=PASS'
+  windows-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows syntax and safe argument rejection
+        shell: pwsh
+        run: |
+          node scripts/test-GuardianV54-TocUtf8.mjs
+          if($LASTEXITCODE -ne 0){throw 'Unicode TOC regression failed'}
+          node --check scripts/GuardianV67-TableScopeAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V67 Node parser failed'}
+          node scripts/test-GuardianV67-TableScopeAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V67 Node test failed'}
+          node --check scripts/GuardianV68-TableDataPairAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V68 Node parser failed'}
+          node scripts/test-GuardianV68-TableDataPairAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V68 Node test failed'}
+          node --check scripts/GuardianV66-TocBlindSpotAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V66 Node parser failed'}
+          node scripts/test-GuardianV66-TocBlindSpotAudit.mjs
+          if($LASTEXITCODE -ne 0){throw 'V66 Node test failed'}
+          node scripts/test-GuardianV69-PatchGate.mjs
+          if($LASTEXITCODE -ne 0){throw 'V69 patch gate regression failed'}
+          node --check scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
+          if($LASTEXITCODE -ne 0){throw 'V69 synthetic read test syntax failed'}
+          node --check scripts/GuardianV54-ArchiveCatalog.mjs
+          if($LASTEXITCODE -ne 0){throw 'Node parser failed'}
+          $out=@(node scripts/GuardianV54-ArchiveCatalog.mjs --archive missing)
+          if($LASTEXITCODE -ne 2 -or ($out -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Must reject unsafe CLI'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V54_WINDOWS_SYNTAX_AND_FAIL_CLOSED=PASS'

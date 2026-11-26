@@ -1,0 +1,73 @@
+name: Guardian V4 manual pre-update and recovery gate
+on:
+  push:
+    paths:
+      - scripts/GuardianV4-ManualRecoveryGate.mjs
+      - .github/workflows/guardian-v4-manual-gate.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV4-ManualRecoveryGate.mjs
+      - .github/workflows/guardian-v4-manual-gate.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  manual-recovery-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Offline synthetic scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/GuardianV4-ManualRecoveryGate.mjs
+          cat >manualgate-test.mjs <<'JS'
+          import {evaluate} from './scripts/GuardianV4-ManualRecoveryGate.mjs';
+          import {mkdtempSync,mkdirSync,writeFileSync,rmSync,statSync} from 'node:fs';
+          import {tmpdir} from 'node:os';
+          import {join} from 'node:path';
+          import {createHash} from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const root=mkdtempSync(join(tmpdir(),'r62-gate-ci-'));
+          try{
+            const components={};
+            for(const role of ['web','api','storage']){
+              const dir=join(root,role);mkdirSync(dir);writeFileSync(join(dir,'fixture'),'synthetic');
+              components[role]={kind:'directory',path:dir};
+            }
+            for(const role of ['database','dns','config','secrets-vault']){
+              const file=join(root,role+(role==='database'?'.r62db':'.txt'));
+              writeFileSync(file,'synthetic');
+              components[role]={kind:'file',path:file};
+            }
+            components.database.sha256=createHash('sha256').update('synthetic').digest('hex');
+            const cfg={format:'r62-guardian-v4-input-1',components};
+            const now=statSync(components.database.path).mtimeMs+1000;
+            const good=evaluate(cfg,{maxAgeHours:24},now);
+            assert.equal(good.readyForManualPreUpdate,true);
+            assert.equal(good.restoreEvidence,false);
+            const old=evaluate(cfg,{maxAgeHours:1},now+25*3600*1000);
+            assert.equal(old.readyForManualPreUpdate,false);
+            writeFileSync(components.database.path,'tampered');
+            const invalid=evaluate(cfg,{maxAgeHours:24},now);
+            assert.equal(invalid.readyForManualPreUpdate,false);
+            console.log('MANUAL_PREUPDATE_PASS_FAIL_TAMPER=PASS');
+          }finally{rmSync(root,{recursive:true,force:true});}
+          JS
+          node manualgate-test.mjs
+          if node scripts/GuardianV4-ManualRecoveryGate.mjs --action bogus --config missing >/tmp/r62-fail; then exit 1; fi
+          grep -q 'NO_PRODUCTION_ACTIONS_PERFORMED=YES' /tmp/r62-fail
+          echo 'FAIL_CLOSED=PASS'
+  windows-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows syntax and fail-closed CLI
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV4-ManualRecoveryGate.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failure'}
+          $output=@(node scripts/GuardianV4-ManualRecoveryGate.mjs --action invalid --config missing)
+          if($LASTEXITCODE -ne 2 -or ($output -join ' ') -notmatch 'NO_PRODUCTION_ACTIONS_PERFORMED=YES'){throw 'Fail closed'}
+          $global:LASTEXITCODE=0
+          Write-Output 'WINDOWS_MANUAL_GATE=PASS'

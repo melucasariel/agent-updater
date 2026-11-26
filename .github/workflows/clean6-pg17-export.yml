@@ -1,0 +1,73 @@
+name: CLEAN6 PG17 catalog export integration
+on:
+  push:
+    paths:
+      - 'scripts/Export-Clean6Catalog.sql'
+      - 'scripts/Compare-Clean6Semantics.mjs'
+      - '.github/workflows/clean6-pg17-export.yml'
+  pull_request:
+    paths:
+      - 'scripts/Export-Clean6Catalog.sql'
+      - 'scripts/Compare-Clean6Semantics.mjs'
+      - '.github/workflows/clean6-pg17-export.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic_only
+          POSTGRES_DB: clean6_lab_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d clean6_lab_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Export synthetic catalog and detect ACL/owner changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cid="$(docker ps --filter ancestor=postgres:17 --format '{{.ID}}' | head -n 1)"
+          test -n "$cid"
+          docker exec "$cid" psql -U postgres -d clean6_lab_ci -X -v ON_ERROR_STOP=1 -q -c "CREATE SCHEMA clean6_fixture; CREATE ROLE fixture_reader NOLOGIN; CREATE TABLE clean6_fixture.sample(id int); GRANT SELECT ON clean6_fixture.sample TO fixture_reader;"
+          docker exec -i "$cid" psql -U postgres -d clean6_lab_ci -X -qAt -v ON_ERROR_STOP=1 -f - < scripts/Export-Clean6Catalog.sql > "$RUNNER_TEMP/expected.json"
+          node -e "const m=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));if(m.format!=='r62-clean6-semantic-v1'||!m.owners.some(x=>x.id.includes('clean6_fixture'))||!m.acls.some(x=>x.grantee==='fixture_reader'))process.exit(1)" "$RUNNER_TEMP/expected.json"
+          docker exec -i "$cid" psql -U postgres -d clean6_lab_ci -X -qAt -v ON_ERROR_STOP=1 -f - < scripts/Export-Clean6Catalog.sql > "$RUNNER_TEMP/unchanged.json"
+          set +e
+          same="$(node scripts/Compare-Clean6Semantics.mjs --expected "$RUNNER_TEMP/expected.json" --actual "$RUNNER_TEMP/unchanged.json")"
+          same_exit=$?
+          set -e
+          [[ "$same" == *"CONTENT_MATCH=YES"* ]] && [[ "$same" == *"REAL_CLEAN6_VERIFIED=NO"* ]]
+          # Exit is allowed to be 1 because this synthetic schema does not have 185/595 records.
+          test "$same_exit" -eq 1
+          docker exec "$cid" psql -U postgres -d clean6_lab_ci -X -v ON_ERROR_STOP=1 -q -c "REVOKE SELECT ON clean6_fixture.sample FROM fixture_reader;"
+          docker exec -i "$cid" psql -U postgres -d clean6_lab_ci -X -qAt -v ON_ERROR_STOP=1 -f - < scripts/Export-Clean6Catalog.sql > "$RUNNER_TEMP/changed.json"
+          set +e
+          bad="$(node scripts/Compare-Clean6Semantics.mjs --expected "$RUNNER_TEMP/expected.json" --actual "$RUNNER_TEMP/changed.json")"
+          bad_exit=$?
+          set -e
+          test "$bad_exit" -eq 1
+          [[ "$bad" == *"MISSING_ACLS=1"* ]]
+          # In a disposable database, prove an ACL write inside BEGIN is undone by ROLLBACK.
+          docker exec "$cid" psql -U postgres -d clean6_lab_ci -X -v ON_ERROR_STOP=1 -q -c "BEGIN; GRANT SELECT ON clean6_fixture.sample TO fixture_reader; ROLLBACK;"
+          docker exec -i "$cid" psql -U postgres -d clean6_lab_ci -X -qAt -v ON_ERROR_STOP=1 -f - < scripts/Export-Clean6Catalog.sql > "$RUNNER_TEMP/after-rollback.json"
+          set +e
+          rollback_report="$(node scripts/Compare-Clean6Semantics.mjs --expected "$RUNNER_TEMP/changed.json" --actual "$RUNNER_TEMP/after-rollback.json")"
+          rollback_exit=$?
+          set -e
+          test "$rollback_exit" -eq 1
+          [[ "$rollback_report" == *"CONTENT_MATCH=YES"* ]]
+          [[ "$rollback_report" == *"MISSING_ACLS=0"* ]]
+          [[ "$rollback_report" == *"EXTRA_ACLS=0"* ]]
+          # Never print catalog JSON, names or roles.
+          echo "PG17_CATALOG_READ_ONLY_EXPORT=PASS"
+          echo "ACL_MUTATION_DETECTED=PASS"
+          echo "SYNTHETIC_ACL_ROLLBACK_PRESERVED_STATE=PASS"
+          echo "PRODUCTION_ACCESSED=NO"
