@@ -158,6 +158,7 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
  let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0,watchdog=null;
+ let stderrObserved=false,timedOut=false;
  const ownedName='r62-guardian-read-'+crypto.randomBytes(8).toString('hex');
  const ownership=crypto.randomBytes(16).toString('hex');
  const secondPlainHash=crypto.createHash('sha256');
@@ -168,17 +169,19 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
    '--cpus','1','--user','999:999','--tmpfs','/tmp:rw,noexec,nosuid,size=16m',
    '--entrypoint','pg_restore',selectedImage,...(mode==='full'?['--file=/dev/null']:['--list'])];
   child=spawn('docker',args,{stdio:['pipe','pipe','pipe'],windowsHide:true,env:{...process.env,DOCKER_HOST:undefined,DOCKER_CONTEXT:undefined}});
-  watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},mode==='full'?360000:90000);
-  const done=new Promise((resolve,reject)=>{
-   child.on('error',()=>reject(Error('DOCKER_TOOL_FAILED')));
-   child.on('close',code=>resolve(code));
+  watchdog=setTimeout(()=>{timedOut=true;if(child&&!child.killed)child.kill();},mode==='full'?360000:90000);
+  // Resolve rather than rejecting immediately: no transient unhandled promise
+  // on failed Docker startup while the authenticated input stream is unwinding.
+  const done=new Promise(resolve=>{
+   child.on('error',()=>resolve(-1));
+   child.on('close',code=>resolve(code??-1));
   });
   child.stdout.on('data',x=>{
    if(mode==='full'){badOutput=true;return;}
    if(stdout.length+x.length>8*1024*1024)badOutput=true;
    else stdout+=x.toString('utf8');
   });
-  child.stderr.resume(); // Never output raw pg_restore metadata or archive names.
+  child.stderr.on('data',()=>{stderrObserved=true;}); // Count only; never expose object names or raw warnings.
   child.stdin.on('error',()=>{}); // pg_restore may stop reading after TOC; ciphertext still authenticated separately.
   const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(m.head.nonce,'hex'));
   decipher.setAAD(m.aad);decipher.setAuthTag(m.tag);
@@ -204,7 +207,8 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
   const exit=await done;
   clearTimeout(watchdog);watchdog=null;
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
-  if(exit!==0||badOutput||(mode==='full'&&skippedOutputBytes>0))fail(mode==='full'?'PG_RESTORE_FULL_READ_FAILED':'PG_RESTORE_LIST_FAILED');
+  if(exit!==0||timedOut||stderrObserved||badOutput||(mode==='full'&&skippedOutputBytes>0))
+   fail(mode==='full'?'PG_RESTORE_FULL_READ_FAILED':'PG_RESTORE_LIST_FAILED');
   // Second pass must still be the exact authenticated archive: reject a
   // concurrent swap to another valid AES-GCM envelope or a mid-read mutation.
   if(secondPlainHash.digest('hex')!==expectedPlainSha||
