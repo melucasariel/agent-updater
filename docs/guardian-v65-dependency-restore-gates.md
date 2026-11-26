@@ -57,3 +57,12 @@ Execução local pelo operador, após CI 34/34 no commit `32f338b4bcd4f5d4a0fdde
 ### Interpretação e próximo gate
 Esses indicadores são **evidência do relatório local fornecido pelo operador**, não logs da própria CI, nem prova de dados, owners ou grants restaurados. As nove entradas não reconhecidas e um token final não padronizado ainda exigem classificação segura em memória. `TOC_OTHER=13` tem definição distinta de `SHAPE_UNRECOGNIZED_TYPES=9`, não subtrair nem equiparar.
 Próxima implementação: produzir histogramas **apenas de classes genéricas e razões de ambiguidade**, sem IDs, nomes, SQL, paths ou dados; exercitar testes adversariais e pipeline sintético novamente antes de executar contra o backup real. Não gerar `CREATE ROLE`, nem mudar ambientes CLEAN6 ou produção.
+
+## V6.6 experimental blind-spot classification (synthetic tests first)
+- Independent module `scripts/GuardianV66-TocBlindSpotAudit.mjs` consumes TOC text **only in memory** and delegates basic count/duplication validation to V6.5.
+- Separates formerly unrecognized items into (i) known, fixed *public pg_dump type labels* absent from V6.5's allowlist, and (ii) other unknown shapes. Its histogram contains only vetted PostgreSQL type labels (e.g. `STATISTICS DATA`, `EVENT TRIGGER`), **never** user names, object identifiers, SQL or user-supplied strings.
+- Separates the V6.5 nonstandard last token into candidate-only-type and no-owner-proof-type counts; does not interpret either as a valid role.
+- Regression fixtures assert that fabricated private identifiers and quoted owner names never occur in serialized output. Fail-closed on duplicate TOC ids or invalid size/count.
+- CI: `guardian-v54-catalog.yml` now runs V6.6 synthetic tests on Linux and Windows. **New commit CI must be independently checked**; previous 34/34 belongs to older V6.5 commit and does not attest V6.6.
+- V6.6 is **NOT wired into the authenticated Windows operator**. Existing authenticated V6.5 behavior is unchanged. Do not run the genuine backup or introduce a sixth script in the Windows command until the new code is tested and explicitly integrated behind the same safety controls.
+- The 9 unknown types and 1 anomalous tail from the genuine archive remain unresolved, as the genuine TOC has not been provided to V6.6.
