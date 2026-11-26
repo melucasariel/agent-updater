@@ -1,0 +1,35 @@
+name: Guardian V6.1 global roles evidence
+on:
+  push:
+    paths:
+      - scripts/GuardianV61-GlobalRolesEvidence.mjs
+      - scripts/test-GuardianV61-GlobalRolesEvidence.mjs
+      - .github/workflows/guardian-v61-global-roles.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV61-GlobalRolesEvidence.mjs
+      - scripts/test-GuardianV61-GlobalRolesEvidence.mjs
+      - .github/workflows/guardian-v61-global-roles.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-no-execution:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check globals-only SQL evidence without exposing role names or passwords
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV61-GlobalRolesEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failed'}
+          node scripts/test-GuardianV61-GlobalRolesEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'Scanner test failed'}
+          $r=@(node scripts/GuardianV61-GlobalRolesEvidence.mjs --wrong argument)
+          if($LASTEXITCODE -ne 2 -or ($r -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'CLI must block'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V61_GLOBAL_SQL_NEVER_EXECUTED=PASS'
