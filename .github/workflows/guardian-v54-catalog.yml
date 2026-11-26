@@ -12,6 +12,7 @@ on:
       - scripts/GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-TocUtf8.mjs
       - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
       - scripts/test-GuardianV69-PatchGate.mjs
       - .github/workflows/guardian-v54-catalog.yml
@@ -27,6 +28,7 @@ on:
       - scripts/GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV68-TableDataPairAudit.mjs
       - scripts/test-GuardianV54-ArchiveCatalog.mjs
+      - scripts/test-GuardianV54-TocUtf8.mjs
       - scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
       - scripts/test-GuardianV69-PatchGate.mjs
       - .github/workflows/guardian-v54-catalog.yml
@@ -42,6 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node scripts/test-GuardianV54-TocUtf8.mjs
           node scripts/test-GuardianV69-PatchGate.mjs
           node --check scripts/test-GuardianV69-SyntheticFullPayloadRead.mjs
           node --check scripts/GuardianV54-ArchiveCatalog.mjs
@@ -85,6 +88,8 @@ jobs:
       - name: Windows syntax and safe argument rejection
         shell: pwsh
         run: |
+          node scripts/test-GuardianV54-TocUtf8.mjs
+          if($LASTEXITCODE -ne 0){throw 'Unicode TOC regression failed'}
           node --check scripts/GuardianV67-TableScopeAudit.mjs
           if($LASTEXITCODE -ne 0){throw 'V67 Node parser failed'}
           node scripts/test-GuardianV67-TableScopeAudit.mjs
