@@ -140,7 +140,7 @@ function ciphertextHash(file){
  });
 }
 export function verifyPg17PatchVersion(version){
- const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)$/.exec((version||'').trim());
+ const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)(?: \((?:Debian|Ubuntu) [A-Za-z0-9.+:~_-]{1,96}\))?$/.exec((version||'').trim());
  if(!m||Number(m[1])<12)fail('PG17_PATCH_LEVEL_BLOCKED');
  return true;
 }
