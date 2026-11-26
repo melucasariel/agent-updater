@@ -71,6 +71,23 @@ const pairs=[
 const v68=v67.replace('END_REPORT_OK',pairs.join('\n')+'\nEND_REPORT_OK');
 assert.equal(parseSafeReport(v68).items,919);
 
+const oidLines=[
+ 'PAIR_OID_MATCHED=70',
+ 'PAIR_OID_TABLE_ONLY=6',
+ 'PAIR_OID_DATA_ONLY=1',
+ 'PAIR_OID_DUPLICATE_TABLE=0',
+ 'PAIR_OID_DUPLICATE_DATA=0',
+ 'PAIR_OID_INVALID_TABLE=1',
+ 'PAIR_OID_INVALID_DATA=2'
+];
+const oidReport=v68.replace('END_REPORT_OK',oidLines.join('\n')+'\nEND_REPORT_OK');
+assert.equal(parseSafeReport(oidReport).items,919);
+assert.throws(()=>parseSafeReport(oidReport.replace('PAIR_OID_TABLE_ONLY=6','PAIR_OID_TABLE_ONLY=5')),
+ e=>e.message==='PAIR_OID_COUNTER_INCONSISTENT');
+assert.throws(()=>parseSafeReport(oidReport.replace('PAIR_OID_DATA_ONLY=1\n','')),
+ e=>e.message==='PAIR_OID_REPORT_INCOMPLETE');
+
+
 const detailedReasons=[
  'PAIR_REASON_TABLE_QUOTED=1',
  'PAIR_REASON_TABLE_UNICODE=0',
