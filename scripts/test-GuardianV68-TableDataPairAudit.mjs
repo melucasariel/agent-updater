@@ -196,6 +196,36 @@ for(const value of ['only_table','only_data','owner_conflict','quoted schema','c
  assert.equal(JSON.stringify(e).includes(value),false);
 console.log('V68_GAP_REASONS_RECONCILED_AND_PRIVATE=PASS');
 
+
+// Independent catalog OID cross-check. PostgreSQL TABLE is class 1259,
+// TABLE DATA is normally class 0 and shares its object's nonzero OID.
+const oidFixture=[
+ '1; 1259 101 TABLE public "ambiguous-name" fixture_owner',
+ '2; 0 101 TABLE DATA public "ambiguous-name" fixture_owner',
+ '3; 1259 102 TABLE public standalone fixture_owner',
+ '4; 0 103 TABLE DATA public orphan fixture_owner',
+ '5; 1259 104 TABLE public duplicate fixture_owner',
+ '6; 1259 104 TABLE public duplicate other_owner',
+ '7; 0 104 TABLE DATA public duplicate fixture_owner',
+ '8; 1259 0 TABLE public invalid_oid fixture_owner',
+ '9; 0 0 TABLE DATA public invalid_oid fixture_owner',
+ '10; 1 1 EXTENSION - pgcrypto'
+].join('\n');
+const oidCheck=auditTocTableDataPairs(oidFixture);
+assert.equal(oidCheck.tableEntries,5);
+assert.equal(oidCheck.dataEntries,4);
+assert.equal(oidCheck.oidStructurallyMatched,1);
+assert.equal(oidCheck.oidTableOnly,1);
+assert.equal(oidCheck.oidDataOnly,1);
+assert.equal(oidCheck.oidDuplicateTable,2);
+assert.equal(oidCheck.oidDuplicateData,1);
+assert.equal(oidCheck.oidInvalidTable,1);
+assert.equal(oidCheck.oidInvalidData,1);
+assert.equal(oidCheck.ambiguousTableEntries,1);
+for(const secret of ['ambiguous-name','fixture_owner','other_owner','101','102','103','104'])
+ assert.equal(JSON.stringify(oidCheck).includes(secret),false);
+console.log('V68_PG17_OID_MATCH_CONSERVATIVE_AND_REDACTED=PASS');
+
 console.log('V68_TABLE_DATA_PAIR_COUNTS_RECONCILE=PASS');
 console.log('V68_DUPLICATE_AND_AMBIGUOUS_FAIL_CLOSED=PASS');
 console.log('V68_NO_PRIVATE_NAMES_OR_DATA_PROOF=PASS');
