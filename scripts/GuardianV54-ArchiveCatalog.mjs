@@ -246,6 +246,7 @@ export async function main(argv){
   'SCOPE_NO_SCHEMA_TABLES='+result.toc.tableScopeAudit.noSchemaTableEntries,
   'SCOPE_COMPLEX_SCHEMA_TABLES='+result.toc.tableScopeAudit.complexOrAmbiguousSchemaTableEntries,
   'SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO',
+  'AUDIT_PROFILE=V68_STRUCTURAL_TABLE_DATA',
   'PAIR_STRUCTURALLY_MATCHED='+result.toc.tableDataPairs.structurallyPaired,
   'PAIR_UNPAIRED_SIMPLE_TABLE='+result.toc.tableDataPairs.unpairedSimpleTableEntries,
   'PAIR_UNPAIRED_SIMPLE_DATA='+result.toc.tableDataPairs.unpairedSimpleDataEntries,
