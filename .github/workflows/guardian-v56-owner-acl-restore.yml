@@ -119,6 +119,8 @@ jobs:
           echo 'V58_WRONG_PASSWORD_AND_BAD_TAG_FAIL_BEFORE_RESTORE=PASS'
           node scripts/GuardianV58-EncryptedLabRestore.mjs --synthetic-archive "$root/fixture.r62db" --sha256 "$checksum" --target "$dest_name" --mode synthetic-ci >"$root/actual-restore"
           grep -q 'AES_GCM_AUTHENTICATED_BEFORE_SQL=YES' "$root/actual-restore"
+          grep -q 'IMMUTABLE_CIPHERTEXT_SNAPSHOT=YES' "$root/actual-restore"
+          grep -q 'MEMORY_BUFFERS_WIPED=YES' "$root/actual-restore"
           grep -q 'PG_DUMP_RESTORED_TRANSACTONALLY=YES' "$root/actual-restore"
           echo 'V58_SYNTHETIC_ENCRYPTED_POSTGRES_RESTORE=PASS'
           cat >"$root/check.sql" <<'SQL'
