@@ -31,16 +31,26 @@ export function inspectToc(text,currentMetadata=null){
   const payload=m[2];
   const type=TYPES.find(t=>payload.startsWith(t+' '));
   if(!type){unclassifiedEntries++;continue;}
-  // PostgreSQL TOC format often ends with a role owner, but quoted role
-  // names containing spaces and unusual records cannot be parsed reliably.
+  // pg_restore --list normally renders EXTENSION as "EXTENSION - name"
+  // with NO owner token. Some alternate versions show an owner as a third
+  // token. Never misclassify the extension's NAME as a role.
+  if(type==='EXTENSION'){
+   extensionEntries++;
+   const match=/^EXTENSION - ([a-zA-Z_][a-zA-Z_0-9-]{0,127})(?: ([-a-zA-Z_][a-zA-Z_0-9$-]{0,127}))?$/.exec(payload);
+   if(!match){unclassifiedEntries++;continue;}
+   ext.add(match[1]);
+   if(match[2]&&match[2]!=='-'){
+    if(owner.test(match[2]))owners.add(match[2]);
+    else ambiguousOwner++;
+   }
+   continue;
+  }
+  // Most other entries finish with owner, but object types such as
+  // extensions are special. This remains a conservative CANDIDATE count,
+  // not proof of all owner identities or global grants.
   const last=payload.slice(payload.lastIndexOf(' ')+1);
   if(!owner.test(last)){ambiguousOwner++;continue;}
   if(last!=='-')owners.add(last);
-  if(type==='EXTENSION'){
-   extensionEntries++;
-   const match=/^EXTENSION - ([a-zA-Z_][a-zA-Z_0-9-]{0,127}) (?:-|[a-zA-Z_][a-zA-Z_0-9$-]*)$/.exec(payload);
-   if(match)ext.add(match[1]);
-  }
  }
  let metadataCompared=false,missingOwnerRoles=0,missingExtensionNames=0;
  if(currentMetadata!==null){
