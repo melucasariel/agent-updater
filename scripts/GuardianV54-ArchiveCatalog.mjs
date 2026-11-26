@@ -150,15 +150,18 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
  const selectedImage=localDocker();
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
- let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0;
+ let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0,watchdog=null;
+ const ownedName='r62-guardian-read-'+crypto.randomBytes(8).toString('hex');
+ const ownership=crypto.randomBytes(16).toString('hex');
  const secondPlainHash=crypto.createHash('sha256');
  try{
   const args=['run','--rm','-i','--pull','never','--network','none','--read-only',
+   '--name',ownedName,'--label','r62.guardian.owner='+ownership,
    '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','64','--memory','256m',
    '--cpus','1','--user','999:999','--tmpfs','/tmp:rw,noexec,nosuid,size=16m',
    '--entrypoint','pg_restore',selectedImage,...(mode==='full'?['--file=/dev/null']:['--list'])];
   child=spawn('docker',args,{stdio:['pipe','pipe','pipe'],windowsHide:true,env:{...process.env,DOCKER_HOST:undefined,DOCKER_CONTEXT:undefined}});
-  const watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},mode==='full'?360000:90000);
+  watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},mode==='full'?360000:90000);
   const done=new Promise((resolve,reject)=>{
    child.on('error',()=>reject(Error('DOCKER_TOOL_FAILED')));
    child.on('close',code=>resolve(code));
@@ -192,7 +195,7 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
   }catch{failed=true;}
   if(!child.stdin.destroyed)child.stdin.end();
   const exit=await done;
-  clearTimeout(watchdog);
+  clearTimeout(watchdog);watchdog=null;
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
   if(exit!==0||badOutput||(mode==='full'&&skippedOutputBytes>0))fail(mode==='full'?'PG_RESTORE_FULL_READ_FAILED':'PG_RESTORE_LIST_FAILED');
   // Second pass must still be the exact authenticated archive: reject a
@@ -229,8 +232,14 @@ async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlai
     fail('TOC_AUDIT_COUNTER_INCONSISTENT');
   return {...catalog,dependencySummary,shapeAudit,blindSpotAudit,tableScopeAudit,tableDataPairs};
  }finally{
+  if(watchdog)clearTimeout(watchdog);
   key.fill(0);
   if(child&&!child.killed&&child.exitCode===null)child.kill();
+  // Clean only an owned disposable container. Never remove CLEAN6 or any
+  // existing container; the random label must match the current invocation.
+  const label=dockerProbe(['inspect','--type','container','--format',
+   '{{index .Config.Labels "r62.guardian.owner"}}',ownedName],6000);
+  if(label===ownership)dockerProbe(['rm','-f',ownedName],12000);
  }
 }
 export async function examine(file,sha,password,options={}){
