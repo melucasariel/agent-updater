@@ -33,9 +33,24 @@ assert.throws(()=>inspectToc(toc.replace('9; 0 104','8; 0 104')),e=>e.message===
 assert.throws(()=>inspectToc(toc,{...meta,evidence:'HISTORICALLY_CONFIRMED'}),
  e=>e.message==='CURRENT_METADATA_INVALID');
 assert.throws(()=>inspectToc('1; 0 1 TABLE x t p'),e=>e.message==='TOC_ITEMS_INVALID');
+// The real PG17 pg_restore --list uses ownerless EXTENSION records.
+// The extension name MUST NOT be included as an owner role candidate.
+const ownerless=toc
+ .replace('EXTENSION - pgcrypto postgres','EXTENSION - pgcrypto')
+ .replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_net');
+const ownerlessInfo=inspectToc(ownerless,meta);
+assert.equal(ownerlessInfo.extensionsListed,2);
+assert.equal(ownerlessInfo.distinctExtensions,2);
+assert.equal(ownerlessInfo.distinctVisibleOwnerRoles,2);
+assert.equal(ownerlessInfo.missingExtensionNames,1);
+assert.equal(ownerlessInfo.ambiguousOwner,0);
+const extensionOnly=ownerless.replaceAll('postgres','-').replaceAll('supabase_admin','-');
+assert.equal(inspectToc(extensionOnly).distinctExtensions,2);
+assert.equal(inspectToc(extensionOnly).distinctVisibleOwnerRoles,0);
 const flipped=toc.replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_trgm supabase_admin');
 assert.notEqual(inspectToc(toc).dependencyFingerprint16,inspectToc(flipped).dependencyFingerprint16);
 console.log('V64_ARCHIVE_OWNER_EXTENSION_COUNTS=PASS');
+console.log('V64_OWNERLESS_PG17_EXTENSION_NAMES_NOT_ROLES=PASS');
 console.log('V64_CURRENT_ROSTER_DIFFERENCE_NOT_HISTORICAL_PROOF=PASS');
 console.log('V64_TOC_DUPLICATES_INVALID_SOURCE=BLOCKED');
 console.log('V64_NO_SQL_NO_DB_NO_PRIVATE_NAMES_PRINTED=YES');
