@@ -6,9 +6,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawn,spawnSync} from 'node:child_process';
 import {pipeline} from 'node:stream/promises';
-import {Transform} from 'node:stream';
+import {Readable} from 'node:stream';
 import {fileURLToPath} from 'node:url';
-import {authenticate} from './GuardianV53-AuthenticateR62DB.mjs';
 const fail=x=>{throw Error(x);};
 const scrypt={N:32768,r:8,p:1,maxmem:128*1024*1024};
 function docker(args){
@@ -61,46 +60,65 @@ async function checksum(file){
  for await(const b of fs.createReadStream(file))h.update(b);
  return h.digest('hex');
 }
+// V5.9 strengthened restore: all archive bytes are sealed into ONE immutable
+// ciphertext buffer, completely authenticated and decrypted BEFORE pg_restore
+// starts. This closes the mutation-between-passes / SQL-before-final-tag race.
+// Synthetic-only cap is 64 MiB. Never promote this module to production.
 export async function restoreSynthetic({archive,expectedSha256,password,target}){
- if(!path.isAbsolute(archive)||!/^[a-f0-9]{64}$/i.test(expectedSha256||'')||typeof password!=='string'||!password)fail('INVALID_ARGUMENTS');
+ if(!path.isAbsolute(archive)||!/^[a-f0-9]{64}$/i.test(expectedSha256||'')||
+    typeof password!=='string'||!password)fail('INVALID_ARGUMENTS');
  const originalContainerId=verifyTarget(target);
- const initial=await checksum(archive);
- if(initial!==expectedSha256.toLowerCase())fail('ARCHIVE_SHA_MISMATCH');
- // First pass verifies COMPLETE AES-GCM tag before ANY SQL is executed.
- const verified=await authenticate(archive,initial,password);
- if(verified.bytes<64)fail('ARCHIVE_TOO_SMALL');
- if(await checksum(archive)!==initial)fail('ARCHIVE_CHANGED_BETWEEN_PASSES');
- if(verifyTarget(target)!==originalContainerId)fail('TARGET_CHANGED');
- const meta=parseEnvelope(archive);
- const key=crypto.scryptSync(password,Buffer.from(meta.j.salt,'hex'),32,scrypt);
- const decryptor=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(meta.j.nonce,'hex'));
- decryptor.setAAD(meta.aad);decryptor.setAuthTag(meta.tag);
- let child;
+ const st=fs.lstatSync(archive);
+ if(!st.isFile()||st.isSymbolicLink()||st.size<64||st.size>64*1024*1024)fail('ARCHIVE_SIZE_BLOCKED');
+ let encrypted=null,plaintext=null,key=null,child=null,watchdog=null;
  try{
+  encrypted=fs.readFileSync(archive);
+  if(encrypted.length!==st.size)fail('ARCHIVE_CHANGED_DURING_READ');
+  const initial=crypto.createHash('sha256').update(encrypted).digest('hex');
+  if(initial!==expectedSha256.toLowerCase())fail('ARCHIVE_SHA_MISMATCH');
+  const endStat=fs.lstatSync(archive);
+  if(endStat.size!==st.size||endStat.mtimeMs!==st.mtimeMs)fail('ARCHIVE_CHANGED_DURING_READ');
+  // The complete GCM auth tag must verify on this exact in-memory ciphertext,
+  // not on a second filesystem pass that could change before SQL execution.
+  const meta=parseEnvelope(archive);
+  if(!encrypted.subarray(0,meta.aad.length).equals(meta.aad)||
+     !encrypted.subarray(encrypted.length-16).equals(meta.tag))fail('ARCHIVE_CHANGED_DURING_READ');
+  key=crypto.scryptSync(password,Buffer.from(meta.j.salt,'hex'),32,scrypt);
+  const decryptor=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(meta.j.nonce,'hex'));
+  decryptor.setAAD(meta.aad);decryptor.setAuthTag(meta.tag);
+  try{
+   const stream=encrypted.subarray(meta.start,meta.end+1);
+   plaintext=Buffer.concat([decryptor.update(stream),decryptor.final()]);
+  }catch{fail('AUTHENTICATION_FAILED');}
+  if(plaintext.length<64||plaintext.length>64*1024*1024||
+     plaintext.subarray(0,5).toString('ascii')!=='PGDMP')fail('NOT_PG_CUSTOM_ARCHIVE');
+  // A second target identity check prevents accidental cross-target execution.
+  if(verifyTarget(target)!==originalContainerId)fail('TARGET_CHANGED');
   child=spawn('docker',['exec','-i','--user','postgres',target,'pg_restore',
-   '--exit-on-error','--single-transaction',
-   '-U','postgres','-d','fixture'],{stdio:['pipe','ignore','ignore'],windowsHide:true});
+   '--exit-on-error','--single-transaction','-U','postgres','-d','fixture'],
+   {stdio:['pipe','ignore','ignore'],windowsHide:true});
   const closed=new Promise(resolve=>{
    child.once('error',()=>resolve(-1));child.once('close',code=>resolve(code));
   });
-  let length=0;
-  const plain=crypto.createHash('sha256');
-  const monitor=new Transform({transform(b,e,cb){
-   length+=b.length;
-   if(length>64*1024*1024)return cb(Error('PLAINTEXT_TOO_BIG'));
-   plain.update(b);cb(null,b);
-  }});
-  const guard=setTimeout(()=>{try{child.kill('SIGKILL');}catch{}},120000);
+  watchdog=setTimeout(()=>{try{child.kill('SIGKILL');}catch{}},120000);
   let pipeOk=true;
-  try{await pipeline(fs.createReadStream(archive,{start:meta.start,end:meta.end}),decryptor,monitor,child.stdin);}
+  try{await pipeline(Readable.from([plaintext]),child.stdin);}
   catch{pipeOk=false;try{child.kill('SIGKILL');}catch{}}
-  const exit=await closed;clearTimeout(guard);
+  const exit=await closed;
   if(!pipeOk||exit!==0)fail('RESTORE_TRANSACTION_FAILED');
-  if(length!==verified.bytes||plain.digest('hex')!==verified.plainSha256)fail('PLAINTEXT_MISMATCH');
-  if(await checksum(archive)!==initial)fail('ARCHIVE_CHANGED_AFTER_RESTORE');
-  return {bytes:length,plaintextSha16:verified.plainSha256.slice(0,16).toUpperCase()};
+  // The source may change on disk while being restored, but the applied
+  // plaintext was authenticated against a fixed encrypted snapshot.
+  // If source changed, mark report unverified despite successful SQL restore.
+  const after=fs.lstatSync(archive);
+  if(after.size!==st.size||after.mtimeMs!==st.mtimeMs||
+     await checksum(archive)!==initial)fail('ARCHIVE_CHANGED_AFTER_RESTORE');
+  return {bytes:plaintext.length,plaintextSha16:crypto.createHash('sha256')
+   .update(plaintext).digest('hex').slice(0,16).toUpperCase()};
  }finally{
-  key.fill(0);
+  if(watchdog)clearTimeout(watchdog);
+  if(key)key.fill(0);
+  if(plaintext)plaintext.fill(0);
+  if(encrypted)encrypted.fill(0);
   if(child&&child.exitCode===null)try{child.kill('SIGKILL');}catch{}
  }
 }
@@ -112,20 +130,20 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   const p=process.env.R62_V58_SYNTHETIC_PASSWORD;
   if(!p||p.length<12)fail('SYNTHETIC_CREDENTIAL_REQUIRED');
   const r=await restoreSynthetic({archive:args[1],expectedSha256:args[3],target:args[5],password:p});
-  console.log(['=== ROTA62 GUARDIAN V5.8 SYNTHETIC ENCRYPTED RESTORE ===',
-    'AES_GCM_AUTHENTICATED_BEFORE_SQL=YES','PG_DUMP_RESTORED_TRANSACTONALLY=YES',
+  console.log(['=== ROTA62 GUARDIAN V5.9 SEALED SYNTHETIC RESTORE ===',
+    'AES_GCM_AUTHENTICATED_BEFORE_SQL=YES','IMMUTABLE_CIPHERTEXT_SNAPSHOT=YES','PG_DUMP_RESTORED_TRANSACTONALLY=YES',
     'DECRYPTED_SHA16='+r.plaintextSha16,'PLAIN_BYTES='+r.bytes,
-    'NO_NEW_PLAINTEXT_FILE=YES','OWNER_ACL_FLAGS_SKIPPED=NO',
+    'NO_NEW_PLAINTEXT_FILE=YES','MEMORY_BUFFERS_WIPED=YES','OWNER_ACL_FLAGS_SKIPPED=NO',
     'REAL_USER_BACKUP_RESTORED=NO','PRODUCTION_TOUCHED=NO','END_REPORT_OK'].join('\n'));
  })().catch(e=>{
   const known=new Set(['USAGE','INVALID_ARGUMENTS','TARGET_NAME_BLOCKED','REMOTE_DOCKER_BLOCKED',
    'DOCKER_CONTEXT_BLOCKED','TARGET_NOT_SYNTHETIC','TARGET_HOST_CONFIG','TARGET_MOUNTS_BLOCKED',
    'TARGET_NETWORK_COUNT','TARGET_NETWORK_NOT_INTERNAL','TARGET_PUBLISHED_PORTS','TARGET_IMAGE_BLOCKED',
    'TARGET_VERSION_BLOCKED','ARCHIVE_SIZE_BLOCKED','ARCHIVE_MAGIC','ARCHIVE_HEADER','ARCHIVE_HEADER_JSON',
-   'ARCHIVE_PARAMETERS','ARCHIVE_SHA_MISMATCH','ARCHIVE_TOO_SMALL','ARCHIVE_CHANGED_BETWEEN_PASSES',
+   'ARCHIVE_PARAMETERS','ARCHIVE_SHA_MISMATCH','ARCHIVE_TOO_SMALL','ARCHIVE_CHANGED_DURING_READ','AUTHENTICATION_FAILED','NOT_PG_CUSTOM_ARCHIVE',
    'TARGET_CHANGED','RESTORE_TRANSACTION_FAILED','PLAINTEXT_MISMATCH','ARCHIVE_CHANGED_AFTER_RESTORE',
    'SYNTHETIC_CREDENTIAL_REQUIRED']);
-  console.log('=== ROTA62 GUARDIAN V5.8 SYNTHETIC ENCRYPTED RESTORE ===\nSTATUS=BLOCKED_'+
+  console.log('=== ROTA62 GUARDIAN V5.9 SEALED SYNTHETIC RESTORE ===\nSTATUS=BLOCKED_'+
    (known.has(e.message)?e.message:'REDACTED')+
    '\nREAL_USER_BACKUP_RESTORED=NO\nPRODUCTION_TOUCHED=NO\nEND_REPORT_OK');process.exitCode=2;
  });
