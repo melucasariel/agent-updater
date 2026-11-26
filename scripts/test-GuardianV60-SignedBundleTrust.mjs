@@ -30,7 +30,8 @@ function build(){
  put(sig,crypto.sign(null,fs.readFileSync(mf),keys.privateKey));
  return m;
 }
-const params={bundleRoot:bundle,manifestFile:mf,signatureFile:sig,publicKeyFile:pub,vaultFile:vault};
+const expectedKeySha256=sha(keys.publicKey.export({format:'der',type:'spki'}));
+const params={bundleRoot:bundle,manifestFile:mf,signatureFile:sig,publicKeyFile:pub,vaultFile:vault,expectedKeySha256};
 const denied=(change,code)=>{
  assert.throws(()=>checkSignedBundle(change),e=>e.message===code,'Expected '+code);
 };
@@ -39,7 +40,8 @@ try{
  let result=checkSignedBundle(params);
  assert.equal(result.count,8);
  assert.ok(result.totalBytes>50);
- denied({...params,publicKeyFile:otherPub},'SIGNATURE_INVALID');
+ denied({...params,publicKeyFile:otherPub},'TRUST_KEY_FINGERPRINT_MISMATCH');
+ denied({...params,expectedKeySha256:'0'.repeat(64)},'TRUST_KEY_FINGERPRINT_MISMATCH');
  // Signature authenticates the exact manifest bytes, not just parsed fields.
  fs.appendFileSync(mf,' ');
  denied(params,'SIGNATURE_INVALID');
