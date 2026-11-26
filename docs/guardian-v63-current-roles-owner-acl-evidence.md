@@ -7,7 +7,7 @@ A consulta SQL `guardian_roles_dependency_report` foi executada no Supabase atua
 Contagem verificada no arquivo recebido:
 
 - `role_memberships`: **24** vínculos distintos, com `ADMIN OPTION` habilitado em **8**, `INHERIT OPTION` em **17**, `SET OPTION` em **24**.
-- `object_owners`: **9 grupos** schema/proprietário, totalizando **306 objetos `pg_class`**: `auth` 140, `cron` 7, `extensions` 2, `net` 6, `public` 79, `realtime` 31 (em dois owners), `storage` 37, `vault` 4. Seis proprietários? NÃO — existem **cinco roles distintas proprietárias** neste relatório: `postgres`, `supabase_admin`, `supabase_auth_admin`, `supabase_realtime_admin`, `supabase_storage_admin`.
+- `object_owners`: **9 grupos** schema/proprietário, totalizando **306 objetos `pg_class`**: `auth` 140, `cron` 7, `extensions` 2, `net` 6, `public` 79, `realtime` 31 (em dois owners), `storage` 37, `vault` 4. Existem **cinco roles distintas proprietárias** neste relatório: `postgres`, `supabase_admin`, `supabase_auth_admin`, `supabase_realtime_admin`, `supabase_storage_admin`.
 - `default_acls`: **27** entradas agrupadas, em `public` 6, `storage` 3, `cron` 3, `extensions` 3, `graphql` 3, `graphql_public` 3, `realtime` 3, `auth` 3. Tipos `S` sequências, `f` funções e `r` relações.
 - Os schemas identificados nos objetos são **oito**: `auth`, `cron`, `extensions`, `net`, `public`, `realtime`, `storage`, `vault`. Os schemas cobertos pelas DEFAULT ACLs também são oito, mas não são necessariamente os mesmos.
 
