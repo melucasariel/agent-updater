@@ -28,11 +28,28 @@ function cliOptions(argv){
  if(!path.isAbsolute(argv[1])||!/^[a-f0-9]{64}$/i.test(argv[3])||!path.isAbsolute(argv[5]))fail('USAGE');
  return {archive:argv[1],sha:argv[3].toLowerCase(),report:argv[5],deepRead:argv.length===7};
 }
-const RESTORED_CONTAINERS=['44fc8a2a3995','529fc3927b48','4645575c1617','9576b226ca0a'];
 let verifiedImage=null;
 function dockerProbe(args,timeout=12000){
  const r=spawnSync('docker',args,{encoding:'utf8',timeout,windowsHide:true,maxBuffer:1024*1024});
  return r.status===0?String(r.stdout).trim():null;
+}
+// Select only preloaded repository images whose name ends in 'postgres'.
+// Never pull or execute an arbitrary image by a supplied mutable name.
+// A caller must still verify an immutable SHA256 image ID and pg_restore 17.
+export function localPostgresImageCandidates(listText){
+ if(typeof listText!=='string'||listText.length>1024*1024)fail('IMAGE_INVENTORY_INVALID');
+ const found=new Set();
+ for(const line of listText.split(/\r?\n/)){
+  if(!line.trim())continue;
+  let item;try{item=JSON.parse(line);}catch{fail('IMAGE_INVENTORY_INVALID');}
+  const repo=item?.Repository,tag=item?.Tag;
+  if(typeof repo!=='string'||typeof tag!=='string')fail('IMAGE_INVENTORY_INVALID');
+  if(!/^(?:[a-z0-9._-]+(?:[:][0-9]+)?\/)*postgres$/i.test(repo))continue;
+  if(!/^[a-z0-9][a-z0-9._-]{0,127}$/i.test(tag))continue;
+  found.add(repo+':'+tag);
+  if(found.size>64)fail('IMAGE_INVENTORY_TOO_LARGE');
+ }
+ return [...found].sort();
 }
 function localDocker(){
  if(verifiedImage)return verifiedImage;
@@ -43,20 +60,12 @@ function localDocker(){
  let ctx;try{ctx=JSON.parse(raw);}catch{fail('DOCKER_CONTEXT_BLOCKED');}
  const host=ctx?.[0]?.Endpoints?.docker?.Host;
  if(typeof host!=='string'||!(host.startsWith('npipe://')||host.startsWith('unix://')))fail('DOCKER_CONTEXT_BLOCKED');
- const candidates=['postgres:17','postgres:17-alpine','postgres:17-bookworm'];
- for(const id of RESTORED_CONTAINERS){
-  const info=dockerProbe(['inspect','--type','container',id]);
-  if(!info)continue;
-  let item;try{item=JSON.parse(info)?.[0];}catch{continue;}
-  // Only pre-existing, identified isolated Postgres restoration containers.
-  if(item?.State?.Running===true&&item?.Id?.startsWith(id)&&typeof item.Image==='string'&&
-     /^sha256:[a-f0-9]{64}$/.test(item.Image)&&
-     String(item.Config?.Image).toLowerCase().includes('postgres')&&
-     Array.isArray(item.Mounts)&&item.Mounts.length===1&&item.Mounts[0].Type==='volume'&&
-     Object.values(item.NetworkSettings?.Ports||{}).every(x=>!Array.isArray(x)||x.length===0)){
-    candidates.push(item.Image);
-  }
- }
+ const imageList=dockerProbe(['image','ls','--no-trunc','--format','{{json .}}']);
+ if(imageList===null)fail('LOCAL_IMAGE_INVENTORY_FAILED');
+ const candidates=[
+  'postgres:17','postgres:17-alpine','postgres:17-bookworm',
+  ...localPostgresImageCandidates(imageList)
+ ];
  for(const candidate of [...new Set(candidates)]){
   const imageId=dockerProbe(['image','inspect','--format','{{.Id}}',candidate]);
   if(!imageId||!/^sha256:[a-f0-9]{64}$/.test(imageId))continue;
