@@ -34,5 +34,12 @@ As 9 entradas não classificadas podem ser tipos de TOC sem proprietário (ex.: 
 - `scripts/GuardianV65-TocShapeRiskAudit.mjs` faz classificação de formato **somente em memória**. Não emite nomes de objetos, roles ou extensões, não executa SQL e não reivindica propriedade histórica.
 - `scripts/test-GuardianV65-TocShapeRiskAudit.mjs` cobre colunas vazias de extensão, tipos desconhecidos, identificadores com aspas, IDs duplicados e impedimento explícito de inferir roles verificadas.
 - A pipeline `guardian-v54-catalog.yml` inclui os testes V6.5 junto ao dump sintético PG17; não lê o backup real em CI.
-- **Não há integração do auditor novo com o operador local neste commit.** O operador autenticado V6.4.2 permanece intocado. A inclusão em CI não significa aprovação até que runs no SHA final sejam verificadas.
+- **Histórico:** inicialmente o auditor foi independente. Consultar a seção de integração abaixo para o estado mais recente.
 - **Atenção às métricas:** `typesWithoutOwnerProof` conta entradas cujo *tipo* não autoriza inferir proprietário, e não prova que essas entradas não tenham proprietário no PostgreSQL. `structuralOwnerCandidatesOnly` também não representa roles reais.
+
+## V6.5 report integration — pending new CI result
+- V5.4 authenticating catalog now imports `GuardianV65-TocShapeRiskAudit.mjs`, verifies equal TOC entry totals and extension-entry totals against V6.4, and emits safe `SHAPE_*` counters. The V6.4 parser and archive cryptographic flow remain unchanged.
+- V5.5 strict report parser recognizes optional `SHAPE_*` fields (backwards compatible), enforces `recognized+unrecognized=archive items`, `no-owner-proof+candidate-only=recognized`, and `nonstandard<=recognized`. It never sums `SHAPE_*` fields into `TOC_*` totals.
+- Windows operator now **requires five local scripts**, including the new V6.5 module, before asking for the password. Any future run must pin and SHA-check all five files from the same CI-reviewed commit; old 4-file command is NOT compatible with the updated importer.
+- V6.5 additional metrics are classification-only, NOT historical roles proof, permissions inventory, or restore permission.
+- These modifications require **fresh commit-specific CI success** before execution against the real encrypted archive.
