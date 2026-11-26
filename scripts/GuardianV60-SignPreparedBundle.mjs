@@ -67,7 +67,8 @@ export function signPreparedBundle({bundleRoot,vaultFile,privateKeyFile,publicKe
  try{
   fs.writeFileSync(manifestFile,raw,{flag:'wx',mode:0o600});wroteManifest=true;
   fs.writeFileSync(signatureFile,signature,{flag:'wx',mode:0o600});wroteSignature=true;
-  const result=checkSignedBundle({bundleRoot:root,manifestFile,signatureFile,publicKeyFile,vaultFile});
+  const trustedFingerprint=crypto.createHash('sha256').update(anchored.export({type:'spki',format:'der'})).digest('hex');
+  const result=checkSignedBundle({bundleRoot:root,manifestFile,signatureFile,publicKeyFile,vaultFile,expectedKeySha256:trustedFingerprint});
   return result;
  }catch(e){
   // Delete only files created by this call, never preexisting backups or keys.
@@ -111,6 +112,7 @@ async function cli(a){
  console.log(['=== ROTA62 GUARDIAN V6.0 MANUAL SIGNATURE ===',
   'MANIFEST_AND_DETACHED_SIGNATURE_CREATED=YES','INDEPENDENT_TRUST_KEY_MATCH=YES',
   'SIGNED_COMPONENTS=8','COMPONENT_BYTES_VERIFIED='+result.totalBytes,
+  'TRUSTED_KEY_SHA16='+result.keySha16,
   'PRODUCTION_TOUCHED=NO','BACKUP_CAPTURED_FROM_LIVE_SYSTEM=NO',
   'RECOVERY_READY=NO','END_REPORT_OK'].join('\n'));
 }
