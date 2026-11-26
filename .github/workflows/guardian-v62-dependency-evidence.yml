@@ -1,0 +1,35 @@
+name: Guardian V6.2 current PG17 dependencies safe evidence
+on:
+  push:
+    paths:
+      - scripts/GuardianV62-CurrentDependencyEvidence.mjs
+      - scripts/test-GuardianV62-CurrentDependencyEvidence.mjs
+      - .github/workflows/guardian-v62-dependency-evidence.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV62-CurrentDependencyEvidence.mjs
+      - scripts/test-GuardianV62-CurrentDependencyEvidence.mjs
+      - .github/workflows/guardian-v62-dependency-evidence.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-current-snapshot:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test current metadata is not original snapshot proof
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV62-CurrentDependencyEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'Syntax failed'}
+          node scripts/test-GuardianV62-CurrentDependencyEvidence.mjs
+          if($LASTEXITCODE -ne 0){throw 'Metadata tests failed'}
+          $bad=@(node scripts/GuardianV62-CurrentDependencyEvidence.mjs --unsafe)
+          if($LASTEXITCODE -ne 2 -or ($bad -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Invalid CLI not blocked'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V62_SAFE_EVIDENCE_CI=PASS'
