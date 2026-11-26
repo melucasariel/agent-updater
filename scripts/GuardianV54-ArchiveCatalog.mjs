@@ -13,6 +13,7 @@ import {spawn,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {authenticate} from './GuardianV53-AuthenticateR62DB.mjs';
 import {inspectToc} from './GuardianV64-TocDependencyPreflight.mjs';
+import {auditTocShape} from './GuardianV65-TocShapeRiskAudit.mjs';
 
 const fail=x=>{throw Error(x)};
 const MAGIC=Buffer.from('R62DB02\n','ascii');
@@ -170,7 +171,12 @@ async function catalogFromEncrypted(file,passwd){
   clearTimeout(watchdog);
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
   if(exit!==0||badOutput)fail('PG_RESTORE_LIST_FAILED');
-  return {...classifyTOC(stdout),dependencySummary:inspectToc(stdout)};
+  const catalog=classifyTOC(stdout);
+  const dependencySummary=inspectToc(stdout);
+  const shapeAudit=auditTocShape(stdout);
+  if(catalog.items!==dependencySummary.entries||catalog.items!==shapeAudit.entries||
+    catalog.counts.EXTENSION!==shapeAudit.extensionEntries)fail('TOC_AUDIT_COUNTER_INCONSISTENT');
+  return {...catalog,dependencySummary,shapeAudit};
  }finally{
   key.fill(0);
   if(child&&!child.killed&&child.exitCode===null)child.kill();
@@ -199,7 +205,13 @@ export async function main(argv){
   'DEPENDENCY_UNCLASSIFIED_TOC_ENTRIES='+result.toc.dependencySummary.unclassifiedEntries,
   'DEPENDENCY_AMBIGUOUS_TOC_OWNER_ENTRIES='+result.toc.dependencySummary.ambiguousOwner,
   'DEPENDENCY_SHA16='+result.toc.dependencySummary.dependencyFingerprint16,
-  'DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO'];
+  'DEPENDENCY_ROLE_GRANTEES_COMPLETE=NO',
+  'SHAPE_RECOGNIZED_TYPES='+result.toc.shapeAudit.recognizedTypes,
+  'SHAPE_UNRECOGNIZED_TYPES='+result.toc.shapeAudit.unrecognizedTypes,
+  'SHAPE_NO_OWNER_PROOF_ITEMS='+result.toc.shapeAudit.typesWithoutOwnerProof,
+  'SHAPE_OWNER_CANDIDATE_ONLY_ITEMS='+result.toc.shapeAudit.structuralOwnerCandidatesOnly,
+  'SHAPE_NONSTANDARD_LAST_TOKENS='+result.toc.shapeAudit.nonstandardLastTokens,
+  'SHAPE_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO'];
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
