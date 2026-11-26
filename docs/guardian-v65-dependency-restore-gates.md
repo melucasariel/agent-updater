@@ -66,3 +66,12 @@ Próxima implementação: produzir histogramas **apenas de classes genéricas e 
 - CI: `guardian-v54-catalog.yml` now runs V6.6 synthetic tests on Linux and Windows. **New commit CI must be independently checked**; previous 34/34 belongs to older V6.5 commit and does not attest V6.6.
 - V6.6 is **NOT wired into the authenticated Windows operator**. Existing authenticated V6.5 behavior is unchanged. Do not run the genuine backup or introduce a sixth script in the Windows command until the new code is tested and explicitly integrated behind the same safety controls.
 - The 9 unknown types and 1 anomalous tail from the genuine archive remain unresolved, as the genuine TOC has not been provided to V6.6.
+
+## V6.6 integrated diagnostic implementation — CI gate
+Integrated V6.6 into the authenticated in-memory V5.4 catalog reader, with counters:
+`BLIND_KNOWN_PUBLIC_KIND_ITEMS`, `BLIND_OTHER_UNKNOWN_SHAPES`,
+`BLIND_NONSTANDARD_CANDIDATE_ITEMS`, `BLIND_NONSTANDARD_NO_PROOF_ITEMS`,
+`BLIND_HISTORICAL_GLOBAL_ROLES_VERIFIED=NO`.
+Crosschecks require known+other=V6.5 unknown and candidate+no-proof=V6.5 nonstandard; V5.5 accepts these only as an optional complete group with strict arithmetic validation. All names remain omitted.
+V5.4 PowerShell operator now requires **six pinned files**: V53, V54, V64, V65, V66, and the operator PS1. Do not reuse five-file V6.5 download command with newly integrated V6.6 files. V6.4.2/V6.5 previous pinned scripts remain reproducible.
+New synthetic PG17 integration assertions and corrupted safe-report tests added. **Real backup V6.6 not yet run; new commit-specific CI not yet approved.** No SQL, production modification, automated merge or installer rollout authorized.
