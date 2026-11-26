@@ -64,6 +64,10 @@ Local V22 diagnostic: `STATUS=PASS`; PostgreSQL 17 offline local extension SQL a
 
 Operator V23: selected a local `.r62db` backup folder containing 3 files and found zero additional filename-matched plain/encrypted roles or globals artifacts. This directory-only scan does **not** prove absence elsewhere or historical globals completeness. Operator V24: `STATUS=PASS`; local Supabase CLI present with `db dump --role-only` flag. No remote Supabase project contacted, no roles exported. **Next gate:** identify the intended source project locally and require explicit user approval before any remote export. Any freshly exported roles reflect current database state, **not automatically the historical state** at backup time. Preserve private project refs/secrets; do not restore against production/CLEAN6. 
 
+## Source project linkage discovery V25 — 2026-11-26
+
+Operator-reported V25: local Supabase CLI present; manually selected local TaxiRadar project folder, but no `supabase/config.toml` and no `supabase/.temp/project-ref` found there. `STATUS=PASS` describes completion of the **lookup**, not confirmation of project linkage or historical roles. No remote access, role export, SQL, backup reading, production/CLEAN6 touching. Do not infer missing project, merely missing local metadata in selected folder. Next action requires identifying and explicitly authorizing the correct source project from the user's Supabase dashboard or original deployment settings; any current `db dump --role-only` artifact is a point-in-time snapshot and must not be mislabeled as historical globals. Avoid repetitive scans and do not ever use the local restored CLEAN6 as source evidence.
+
 ## Regression policy
 
 - Retain synthetic valid, corrupted AES-GCM, duplicate TOC ID, duplicate DATA-only name, two-owner mismatch, quoted schema/name, Unicode, nonstandard role, interrupted stream, missing Docker image, remote context, bad blob hash, clipboard sanitization and malformed/legacy V5.5 report cases.
