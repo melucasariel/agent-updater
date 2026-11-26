@@ -170,7 +170,7 @@ jobs:
           test "$row_src" = "$row_dst"
           echo 'SYNTHETIC_ROW_VALUES_MATCH_AFTER_RESTORE=PASS'
           # Corrupt exactly one field without changing table or row counts.
-          docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \\
+          docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \
             -c "UPDATE fixture.jobs SET state='SYNTHETIC_MUTATION_ONLY' WHERE id=1;"
           row_changed=$(docker exec --user postgres "$dest_name" psql -X -qAt -w -v ON_ERROR_STOP=1 -U postgres -d fixture -c "$row_sql")
           test "$row_changed" != "$row_src"
@@ -179,7 +179,7 @@ jobs:
           test "$count_src" = "$count_dst"
           echo 'SYNTHETIC_SAME_ROW_COUNT_CORRUPTION_DETECTED=PASS'
           # Restore synthetic row so the following ACL fault injection stays isolated.
-          docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \\
+          docker exec --user postgres "$dest_name" psql -X -q -w -v ON_ERROR_STOP=1 -U postgres -d fixture \
             -c "UPDATE fixture.jobs SET state='SYNTHETIC_TEST_ONLY' WHERE id=1;"
           row_fixed=$(docker exec --user postgres "$dest_name" psql -X -qAt -w -v ON_ERROR_STOP=1 -U postgres -d fixture -c "$row_sql")
           test "$row_fixed" = "$row_src"
