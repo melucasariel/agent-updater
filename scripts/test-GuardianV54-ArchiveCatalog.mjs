@@ -38,6 +38,10 @@ try{
  assert.ok((result.toc.counts.TABLE_DATA||0)>=1);
  assert.ok((result.toc.counts.POLICY||0)>=1);
  assert.ok(result.toc.dependencySummary.distinctVisibleOwnerRoles>=1);
+ assert.ok(result.toc.counts.EXTENSION>=1);
+ assert.equal(result.toc.dependencySummary.extensionsListed,result.toc.counts.EXTENSION);
+ assert.equal(result.toc.dependencySummary.distinctExtensions,result.toc.counts.EXTENSION);
+ assert.ok(result.toc.dependencySummary.distinctVisibleOwnerRoles<=result.toc.items);
  assert.ok(result.toc.dependencySummary.entries===result.toc.items);
  assert.ok(result.toc.dependencySummary.dependencyFingerprint16.length===16);
  const bad=Buffer.from(wrapped);bad[bad.length-1]^=1;
@@ -45,6 +49,7 @@ try{
  await assert.rejects(()=>examine(archive,sha(bad),password),e=>e.message==='AUTHENTICATION_FAILED');
  console.log('V54_AUTHENTICATED_REAL_PGDUMP_TOC_SYNTHETIC=PASS');
  console.log('V54_TOC_POLICY_INDEX_DATA_COUNTS=PASS');
+ console.log('V64_AUTHENTICATED_PG17_OWNERLESS_EXTENSION_PARSER=PASS');
  console.log('V54_INVALID_TAG_REJECTED_BEFORE_DOCKER=PASS');
  console.log('V54_SQL_EXECUTED=NO');
  console.log('V54_PRODUCTION_DATA_USED=NO');
