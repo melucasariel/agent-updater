@@ -33,7 +33,7 @@ assert.throws(()=>inspectToc(toc.replace('9; 0 104','8; 0 104')),e=>e.message===
 assert.throws(()=>inspectToc(toc,{...meta,evidence:'HISTORICALLY_CONFIRMED'}),
  e=>e.message==='CURRENT_METADATA_INVALID');
 assert.throws(()=>inspectToc('1; 0 1 TABLE x t p'),e=>e.message==='TOC_ITEMS_INVALID');
-const flipped=toc.replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_net postgres');
+const flipped=toc.replace('EXTENSION - pg_net supabase_admin','EXTENSION - pg_trgm supabase_admin');
 assert.notEqual(inspectToc(toc).dependencyFingerprint16,inspectToc(flipped).dependencyFingerprint16);
 console.log('V64_ARCHIVE_OWNER_EXTENSION_COUNTS=PASS');
 console.log('V64_CURRENT_ROSTER_DIFFERENCE_NOT_HISTORICAL_PROOF=PASS');
