@@ -28,7 +28,10 @@ export function inspectToc(text,currentMetadata=null){
   const m=/^\s*(\d+);\s+\d+\s+\d+\s+(.+)$/.exec(line);
   if(!m||seen.has(m[1]))fail('TOC_DUPLICATE_ID');
   seen.add(m[1]);
-  const payload=m[2];
+  // pg_restore --list may end ownerless EXTENSION records with a blank
+  // owner column, yielding trailing spaces. Normalize only right-edge
+  // whitespace; never trim internal names or emit private text.
+  const payload=m[2].trimEnd();
   const type=TYPES.find(t=>payload.startsWith(t+' '));
   if(!type){unclassifiedEntries++;continue;}
   // pg_restore --list normally renders EXTENSION as "EXTENSION - name"
