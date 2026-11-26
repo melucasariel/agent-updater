@@ -141,7 +141,8 @@ export function parseSafeReport(source){
  if(actual!==Number(out.get('ARCHIVE_CATALOG_ITEMS')))fail('TOC_TOTAL_INCONSISTENT');
  return {
   counts,items:actual,referenceTables:Number(out.get('EXPECTED_USER_TABLES_REFERENCE')),
-  fingerprint:out.get('ARCHIVE_CONTENT_SHA16')
+  fingerprint:out.get('ARCHIVE_CONTENT_SHA16'),
+  deepReadReported:out.get('DEEP_FULL_ARCHIVE_READ')==='PASS'
  };
 }
 export function readiness(parsed){
@@ -157,7 +158,8 @@ export function readiness(parsed){
   policy:(c.POLICY??0)>0,
   tableData:(c.TABLE_DATA??0)>0,
   tableScopeReview:tableDelta!==0,
-  unknownTocType:(c.OTHER??0)>0
+  unknownTocType:(c.OTHER??0)>0,
+  deepPayloadClaim:parsed.deepReadReported===true
  };
  // One TOC TABLE is not equivalent to a pg_class table in a specific schema.
  // TABLE DATA entries also are not a trustworthy proxy for row counts.
@@ -173,6 +175,7 @@ export function readiness(parsed){
  'REQUIRE_TIMED_END_TO_END_REHEARSAL'
  ];
  if(signal.unknownTocType)conditions.push('REQUIRE_UNCLASSIFIED_TOC_REVIEW');
+ if(!signal.deepPayloadClaim)conditions.push('REQUIRE_FULL_PAYLOAD_READ_EVIDENCE');
  return {counts:c,items:parsed.items,tableDelta,signal,conditions};
 }
 function run(argv){
@@ -189,6 +192,7 @@ function run(argv){
   'REFERENCE_SCOPED_TABLE_COUNT='+((r.counts.TABLE??0)-r.tableDelta),
   'TABLE_COUNT_SCOPE_MISMATCH='+(r.signal.tableScopeReview?'REVIEW_REQUIRED':'NO'),
   'TABLE_DATA_IS_NOT_ROW_COUNT=YES',
+  'SAFE_REPORT_CLAIMS_DEEP_PAYLOAD_READ='+(r.signal.deepPayloadClaim?'YES':'NO'),
   'TOC_ACL_ENTRIES='+(r.counts.ACL??0),
   'TOC_DEFAULT_ACL_ENTRIES='+(r.counts.DEFAULT_ACL??0),
   'TOC_TRIGGERS='+(r.counts.TRIGGER??0),
