@@ -12,6 +12,7 @@ import path from 'node:path';
 import {spawn,spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {authenticate} from './GuardianV53-AuthenticateR62DB.mjs';
+import {inspectToc} from './GuardianV64-TocDependencyPreflight.mjs';
 
 const fail=x=>{throw Error(x)};
 const MAGIC=Buffer.from('R62DB02\n','ascii');
@@ -169,7 +170,7 @@ async function catalogFromEncrypted(file,passwd){
   clearTimeout(watchdog);
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
   if(exit!==0||badOutput)fail('PG_RESTORE_LIST_FAILED');
-  return classifyTOC(stdout);
+  return {...classifyTOC(stdout),dependencySummary:inspectToc(stdout)};
  }finally{
   key.fill(0);
   if(child&&!child.killed&&child.exitCode===null)child.kill();
@@ -192,7 +193,13 @@ export async function main(argv){
   'LOCAL_PG17_IMAGE_VERIFIED=YES',
   'DECRYPTED_PG_CUSTOM_HEADER=YES','PG_RESTORE_CATALOG=PASS',
   'ARCHIVE_CONTENT_SHA16='+result.auth.plainSha256.slice(0,16).toUpperCase(),
-  'ARCHIVE_CATALOG_ITEMS='+result.toc.items];
+  'ARCHIVE_CATALOG_ITEMS='+result.toc.items,
+  'TOC_DISTINCT_VISIBLE_OWNER_ROLES='+result.toc.dependencySummary.distinctVisibleOwnerRoles,
+  'TOC_DISTINCT_EXTENSION_NAMES='+result.toc.dependencySummary.distinctExtensions,
+  'TOC_DEPENDENCIES_UNCLASSIFIED='+result.toc.dependencySummary.unclassifiedEntries,
+  'TOC_DEPENDENCIES_AMBIGUOUS_OWNER='+result.toc.dependencySummary.ambiguousOwner,
+  'TOC_DEPENDENCIES_SHA16='+result.toc.dependencySummary.dependencyFingerprint16,
+  'OWNER_MEMBERSHIP_AND_ACL_GRANTEES_COMPLETE=NO'];
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
