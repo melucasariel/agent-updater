@@ -55,7 +55,7 @@ try{
  const s=summarizeIndex(index);
  assert.equal(s.signedBundles,3);
  assert.equal(s.distinctPackages,2);
- assert.equal(s.distinctDatabasePoints,1);
+ assert.equal(s.distinctEncryptedArchives,1);
  assert.equal(s.identicalPackageCopies,1);
  assert.equal(s.releaseLabels,2);
  assert.equal(s.trustedSignerKeys,1);
