@@ -1,0 +1,35 @@
+name: Guardian V6.1 signed recovery inventory
+on:
+  push:
+    paths:
+      - scripts/GuardianV61-SignedRecoveryInventory.mjs
+      - scripts/test-GuardianV61-SignedRecoveryInventory.mjs
+      - .github/workflows/guardian-v61-signed-inventory.yml
+  pull_request:
+    paths:
+      - scripts/GuardianV61-SignedRecoveryInventory.mjs
+      - scripts/test-GuardianV61-SignedRecoveryInventory.mjs
+      - .github/workflows/guardian-v61-signed-inventory.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  distinct-capture-history:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm archive copy versus historical DB points with signed fixture
+        shell: pwsh
+        run: |
+          node --check scripts/GuardianV61-SignedRecoveryInventory.mjs
+          if($LASTEXITCODE -ne 0){throw 'Inventory syntax failure'}
+          node scripts/test-GuardianV61-SignedRecoveryInventory.mjs
+          if($LASTEXITCODE -ne 0){throw 'Inventory fixture failure'}
+          $r=@(node scripts/GuardianV61-SignedRecoveryInventory.mjs --unknown unsafe)
+          if($LASTEXITCODE -ne 2 -or ($r -join ' ') -notmatch 'STATUS=BLOCKED_USAGE'){throw 'Unsafe CLI'}
+          $global:LASTEXITCODE=0
+          Write-Output 'V61_NO_REAL_ARCHIVE_ACCESS=PASS'
