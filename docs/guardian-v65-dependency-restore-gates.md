@@ -93,3 +93,9 @@ User-provided sanitized local operator output on pinned six-file revision `3158d
 - Added `GuardianV67-TableScopeAudit.mjs` and `test-GuardianV67-TableScopeAudit.mjs`, included in Linux/Windows synthetic CI. For authenticated TOC supplied by trusted caller, aggregate only fixed structural classes of `TABLE` entries: public, another syntactically simple schema, no schema and complex/ambiguous schema.
 - Redacted output NEVER returns table/schema/owner names; never equates `TOC_TABLE` with the live count of user tables, and never infers roles. Test includes private identifiers, quoted schema, duplicate entry IDs and no-SQL guardrails.
 - Experimental only: **not imported by authenticated reader, not in Windows operator bundle and not executed on the real archive**. No extra operator command warranted until explicit integration, new CI success and authentic report safety validation.
+
+## V6.7 authenticated TOC scope integration (new CI required)
+- V6.7 TABLE scope assessor imported into authenticated catalog, counts reconciled with `TOC_TABLE` and `TOC_TABLE_DATA`. Diagnostic reports four **only aggregated** fields: `SCOPE_PUBLIC_SCHEMA_TABLES`, `SCOPE_OTHER_SIMPLE_SCHEMA_TABLES`, `SCOPE_NO_SCHEMA_TABLES`, `SCOPE_COMPLEX_SCHEMA_TABLES`, plus the explicit safeguard `SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO`.
+- V5.5 preflight accepts these fields optionally for backward compatibility, rejects partial groups and any sum different from `TOC_TABLE`. Integration and negative tests updated.
+- PowerShell operator now requires **seven** local scripts, including V67, before prompting for backup credentials. Older six-file V6.6 pinned bundle is only valid for its original pinned commit; never mix source versions.
+- This version has not yet been tested against the real encrypted archive. Run no genuine backup until **new commit-specific full synthetic integration + Windows operator + preflight CI** completes.
