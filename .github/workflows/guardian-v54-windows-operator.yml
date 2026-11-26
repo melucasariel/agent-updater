@@ -33,7 +33,9 @@ jobs:
           $result=@(& ./scripts/Invoke-GuardianV54-Catalog.ps1 -ExpectedSha256 $sha -SearchRoots @($dir) -NoClipboard)
           $report=$result -join [Environment]::NewLine
           if($report -notmatch 'MATCHING_CIPHERTEXT_COPIES=1'){throw 'Archive discovery failed'}
-          if($report -notmatch 'TOC_PROCESS_EXIT=BLOCKED'){throw 'Malformed synthetic must be blocked'}
+          if($report -notmatch 'STATUS=BLOCKED_REDACTED'){throw 'Malformed synthetic must fail closed'}
+          if($LASTEXITCODE -ne 2){throw 'Blocked operator must return exit code 2'}
+          if($report -match 'TOC_PROCESS_EXIT=SUCCESS'){throw 'Blocked operator must not claim success'}
           if($report -notmatch 'NO_SQL_EXECUTED=YES'){throw 'Dangerous operations detected'}
           $global:LASTEXITCODE=0
           Write-Output 'V54_WINDOWS_ONE_ENTER_SYNTHETIC_FAIL_CLOSED=PASS'
