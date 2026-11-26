@@ -27,6 +27,11 @@ const TYPES_V65=[
  'PUBLICATION','SUBSCRIPTION','AGGREGATE','DOMAIN','COLLATION',
  'CAST','TRANSFORM','SERVER','BLOB'
 ].sort((a,b)=>b.length-a.length);
+const NO_OWNER_PROOF=new Set(['ACL','DEFAULT ACL','COMMENT','SEQUENCE SET',
+ 'SEQUENCE OWNED BY','TABLE DATA','ROW SECURITY','POLICY','TRIGGER',
+ 'FK CONSTRAINT','CONSTRAINT','INDEX','EXTENSION','BLOB COMMENTS',
+ 'DATABASE PROPERTIES','PUBLICATION TABLE','PUBLICATION TABLES IN SCHEMA',
+ 'TABLE ATTACH','INDEX ATTACH','USER MAPPING']);
 const safeTail=/^(?:-|[a-zA-Z_][a-zA-Z0-9_$-]{0,127})$/;
 export function auditTocBlindSpots(toc){
  const base=auditTocShape(toc);
@@ -49,10 +54,8 @@ export function auditTocBlindSpots(toc){
   if(!safeTail.test(tail)){
    v65Nonstandard++;
    // Diagnostic distinction only: not verified owner.
-   if(['TABLE','SCHEMA','FUNCTION','PROCEDURE','TYPE','SEQUENCE','VIEW',
-     'MATERIALIZED VIEW','FOREIGN TABLE','AGGREGATE','DOMAIN'].includes(type))
-    nonstandardCandidate++;
-   else nonstandardNoOwnerProof++;
+   if(NO_OWNER_PROOF.has(type))nonstandardNoOwnerProof++;
+   else nonstandardCandidate++;
   }
  }
  if(canonicalExtra+unknownShape!==base.unrecognizedTypes ||
