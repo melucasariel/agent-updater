@@ -96,6 +96,46 @@ for(const word of ['owned_private','fixture_owner','other_owner'])
  assert.equal(JSON.stringify(owners).includes(word),false);
 console.log('V68_OWNER_TOKEN_MISMATCH_NOT_PAIRED=PASS');
 
+// Deterministic property tests: compare the auditor against independently
+// computed cardinalities for mixed TABLE-only, DATA-only, unique and duplicate
+// groups, in variable TOC order. No private backup content is read.
+for(let seed=0;seed<64;seed++){
+ const rows=[];
+ let id=1,expectedPairs=0,expectedTables=0,expectedData=0;
+ let expectedTableUnpaired=0,expectedDataUnpaired=0,expectedDuplicates=0;
+ for(let i=0;i<5;i++)rows.push((id++)+'; 1 1 COMMENT - synthetic_metadata_owner_fixture');
+ for(let k=0;k<9;k++){
+  const t=(seed+k*3)%4,d=(seed*3+k)%4;
+  const owner=(k%2===0)?'fixture_owner':'other_fixture_owner';
+  const schema=(k%2===0)?'public':'synthetic';
+  const name='fixture_key_'+k;
+  const tt='TABLE '+schema+' '+name+' '+owner;
+  const dd='TABLE DATA '+schema+' '+name+' '+owner;
+  for(let j=0;j<t;j++)rows.push((id++)+'; 1 1 '+tt);
+  for(let j=0;j<d;j++)rows.push((id++)+'; 1 1 '+dd);
+  expectedTables+=t;expectedData+=d;
+  if(t===1&&d===1)expectedPairs++;
+  else{
+   expectedTableUnpaired+=t;expectedDataUnpaired+=d;
+   if(t>1||d>1)expectedDuplicates+=t+d;
+  }
+ }
+ // Reverse order to ensure order-independent counters.
+ if(seed%2===1)rows.reverse();
+ const p=auditTocTableDataPairs(rows.join('\n'));
+ assert.equal(p.tableEntries,expectedTables);
+ assert.equal(p.dataEntries,expectedData);
+ assert.equal(p.structurallyPaired,expectedPairs);
+ assert.equal(p.unpairedSimpleTableEntries,expectedTableUnpaired);
+ assert.equal(p.unpairedSimpleDataEntries,expectedDataUnpaired);
+ assert.equal(p.duplicateOrNonUniqueEntries,expectedDuplicates);
+ assert.equal(p.ambiguousDataEntries,0);
+ assert.equal(p.ambiguousTableEntries,0);
+ assert.equal(p.rowsVerified,undefined);
+ assert.equal(p.rowCountsVerified,false);
+}
+console.log('V68_64_DETERMINISTIC_TOC_PROPERTY_CASES=PASS');
+
 console.log('V68_DATA_ONLY_DUPLICATES_COUNTED=PASS');
 console.log('V68_REPEATED_PAIR_DEMOTED=PASS');
 console.log('V68_QUOTED_UNICODE_AND_OWNER_AMBIGUITY=PASS');
