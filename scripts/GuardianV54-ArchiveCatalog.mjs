@@ -24,9 +24,9 @@ const EXPECTED_TABLES=76;
 const KDF={N:32768,r:8,p:1,maxmem:128*1024*1024};
 const MAX_ENCRYPTED=1024*1024*1024;
 function cliOptions(argv){
- if(argv.length!==6||argv[0]!=='--archive'||argv[2]!=='--expected-sha256'||argv[4]!=='--report-file')fail('USAGE');
+ if(![6,7].includes(argv.length)||argv[0]!=='--archive'||argv[2]!=='--expected-sha256'||argv[4]!=='--report-file'||(argv.length===7&&argv[6]!=='--deep-read'))fail('USAGE');
  if(!path.isAbsolute(argv[1])||!/^[a-f0-9]{64}$/i.test(argv[3])||!path.isAbsolute(argv[5]))fail('USAGE');
- return {archive:argv[1],sha:argv[3].toLowerCase(),report:argv[5]};
+ return {archive:argv[1],sha:argv[3].toLowerCase(),report:argv[5],deepRead:argv.length===7};
 }
 const RESTORED_CONTAINERS=['44fc8a2a3995','529fc3927b48','4645575c1617','9576b226ca0a'];
 let verifiedImage=null;
@@ -137,24 +137,34 @@ function ciphertextHash(file){
   stream.on('end',()=>resolve(h.digest('hex')));
  });
 }
-async function catalogFromEncrypted(file,passwd,expectedCipherSha,expectedPlainSha){
+function deepReadPatchGate(image){
+ const version=dockerProbe(['run','--rm','--pull','never','--network','none',
+  '--read-only','--cap-drop','ALL','--security-opt','no-new-privileges',
+  '--pids-limit','32','--memory','128m','--cpus','1','--user','999:999',
+  '--entrypoint','pg_restore',image,'--version'],25000);
+ const m=/^pg_restore \(PostgreSQL\) 17\.(\d+)\b/.exec(version||'');
+ if(!m||Number(m[1])<12)fail('PG17_PATCH_LEVEL_BLOCKED');
+}
+async function pgRestoreFromEncrypted(file,passwd,expectedCipherSha,expectedPlainSha,mode='toc'){
+ if(!['toc','full'].includes(mode))fail('UNSAFE_RESTORE_MODE');
  const selectedImage=localDocker();
  const m=header(file);
  const key=crypto.scryptSync(passwd,Buffer.from(m.head.salt,'hex'),32,KDF);
- let child=null,stdout='',badOutput=false,failed=false;
+ let child=null,stdout='',badOutput=false,failed=false,skippedOutputBytes=0;
  const secondPlainHash=crypto.createHash('sha256');
  try{
   const args=['run','--rm','-i','--pull','never','--network','none','--read-only',
    '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','64','--memory','256m',
    '--cpus','1','--user','999:999','--tmpfs','/tmp:rw,noexec,nosuid,size=16m',
-   '--entrypoint','pg_restore',selectedImage,'--list'];
+   '--entrypoint','pg_restore',selectedImage,...(mode==='full'?['--file=/dev/null']:['--list'])];
   child=spawn('docker',args,{stdio:['pipe','pipe','pipe'],windowsHide:true,env:{...process.env,DOCKER_HOST:undefined,DOCKER_CONTEXT:undefined}});
-  const watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},90000);
+  const watchdog=setTimeout(()=>{if(child&&!child.killed)child.kill();},mode==='full'?360000:90000);
   const done=new Promise((resolve,reject)=>{
    child.on('error',()=>reject(Error('DOCKER_TOOL_FAILED')));
    child.on('close',code=>resolve(code));
   });
   child.stdout.on('data',x=>{
+   if(mode==='full'){badOutput=true;return;}
    if(stdout.length+x.length>8*1024*1024)badOutput=true;
    else stdout+=x.toString('utf8');
   });
@@ -177,19 +187,20 @@ async function catalogFromEncrypted(file,passwd,expectedCipherSha,expectedPlainS
        child.stdin.once('error',finish);
       });
      }
-    }
+    }else if(mode==='full'){skippedOutputBytes+=chunk.length;}
    }
   }catch{failed=true;}
   if(!child.stdin.destroyed)child.stdin.end();
   const exit=await done;
   clearTimeout(watchdog);
   if(failed)fail('SECOND_PASS_AUTHENTICATION_FAILED');
-  if(exit!==0||badOutput)fail('PG_RESTORE_LIST_FAILED');
+  if(exit!==0||badOutput||(mode==='full'&&skippedOutputBytes>0))fail(mode==='full'?'PG_RESTORE_FULL_READ_FAILED':'PG_RESTORE_LIST_FAILED');
   // Second pass must still be the exact authenticated archive: reject a
   // concurrent swap to another valid AES-GCM envelope or a mid-read mutation.
   if(secondPlainHash.digest('hex')!==expectedPlainSha||
      await ciphertextHash(file)!==expectedCipherSha)
     fail('CIPHERTEXT_CHANGED_BETWEEN_PASSES');
+  if(mode==='full')return {fullRead:true,sqlExecuted:false,rowsValidated:false};
   const catalog=classifyTOC(stdout);
   const dependencySummary=inspectToc(stdout);
   const shapeAudit=auditTocShape(stdout);
@@ -222,11 +233,13 @@ async function catalogFromEncrypted(file,passwd,expectedCipherSha,expectedPlainS
   if(child&&!child.killed&&child.exitCode===null)child.kill();
  }
 }
-export async function examine(file,sha,password){
+export async function examine(file,sha,password,options={}){
  const auth=await authenticate(file,sha,password);
  if(auth.bytes<32)fail('INVALID_PLAINTEXT');
- const toc=await catalogFromEncrypted(file,password,sha.toLowerCase(),auth.plainSha256);
- return {auth,toc};
+ const toc=await pgRestoreFromEncrypted(file,password,sha.toLowerCase(),auth.plainSha256,'toc');
+ const deepRead=options.deepRead===true?
+  await pgRestoreFromEncrypted(file,password,sha.toLowerCase(),auth.plainSha256,'full'):null;
+ return {auth,toc,deepRead};
 }
 // Pure report contract, shared by authenticated production path and synthetic tests.
 // Contains only fixed whitelisted labels, numeric counters, and fixed-length digests.
@@ -267,6 +280,11 @@ export function renderSafeCatalogReport(result){
   'PAIR_AMBIGUOUS_DATA='+result.toc.tableDataPairs.ambiguousDataEntries,
   'PAIR_DUPLICATE_NONUNIQUE='+result.toc.tableDataPairs.duplicateOrNonUniqueEntries,
   'PAIR_ROWS_VERIFIED=NO'];
+ if(result.deepRead){
+  lines.push('DEEP_FULL_ARCHIVE_READ=PASS');
+  lines.push('DEEP_ROWS_VALIDATED=NO');
+  lines.push('DEEP_SQL_EXECUTED=NO');
+ }
  for(const [k,v] of Object.entries(result.toc.counts).sort())lines.push('TOC_'+k+'='+v);
  lines.push('EXPECTED_USER_TABLES_REFERENCE='+EXPECTED_TABLES);
  lines.push('CATALOG_COUNTS_DO_NOT_VALIDATE_DATA=YES');
@@ -279,9 +297,10 @@ export function renderSafeCatalogReport(result){
 export async function main(argv){
  const p=cliOptions(argv);
  // Fail closed before password. Never execute archiver until full GCM authentication.
- localDocker(); // No password prompt unless a local, preloaded, networkless pg_restore runtime exists.
+ const image=localDocker(); // No password prompt unless a local, preloaded PG17 runtime exists.
+ if(p.deepRead)deepReadPatchGate(image);
  const pass=await passwordTTY();
- const result=await examine(p.archive,p.sha,pass);
+ const result=await examine(p.archive,p.sha,pass,{deepRead:p.deepRead});
  const report=renderSafeCatalogReport(result);
  fs.writeFileSync(p.report,report+'\n',{flag:'wx',mode:0o600});
  console.log(report);
@@ -290,12 +309,12 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  main(process.argv.slice(2)).catch(err=>{
   const known=new Set(['USAGE','REMOTE_DOCKER_CONTEXT','DOCKER_CONTEXT_BLOCKED','PG17_IMAGE_NOT_PRELOADED','PG17_LOCAL_IMAGE_NOT_FOUND',
    'INVALID_ARCHIVE','BAD_MAGIC','BAD_HEADER','UNSUPPORTED_HEADER','TTY_REQUIRED','CANCELLED',
-   'PG_RESTORE_LIST_FAILED','TOC_UNEXPECTEDLY_SMALL','SECOND_PASS_AUTHENTICATION_FAILED']);
+   'PG_RESTORE_LIST_FAILED','PG_RESTORE_FULL_READ_FAILED','PG17_PATCH_LEVEL_BLOCKED','TOC_UNEXPECTEDLY_SMALL','SECOND_PASS_AUTHENTICATION_FAILED','CIPHERTEXT_CHANGED_BETWEEN_PASSES']);
   const report=['=== ROTA62 GUARDIAN V5.4 AUTHENTICATED PG_RESTORE CATALOG ===',
    'STATUS=BLOCKED_'+(known.has(err.message)?err.message:'ERROR_REDACTED'),
    'NO_DATABASE_SQL_EXECUTED=YES','PRODUCTION_TOUCHED=NO','END_REPORT_OK'].join('\n');
   const args=process.argv.slice(2);
-  if(args.length===6&&args[4]==='--report-file'&&path.isAbsolute(args[5])){
+  if([6,7].includes(args.length)&&args[4]==='--report-file'&&path.isAbsolute(args[5])){
    try{fs.writeFileSync(args[5],report+'\n',{flag:'wx',mode:0o600});}catch{}
   }
   console.log(report);process.exitCode=2;
