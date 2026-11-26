@@ -58,14 +58,16 @@ function localDocker(){
   }
  }
  for(const candidate of [...new Set(candidates)]){
-  if(!dockerProbe(['image','inspect',candidate]))continue;
-  // No port, network, mount, env injection or database process is ever started.
+  const imageId=dockerProbe(['image','inspect','--format','{{.Id}}',candidate]);
+  if(!imageId||!/^sha256:[a-f0-9]{64}$/.test(imageId))continue;
+  // Verify the executable using the immutable content-addressed image ID.
+  // A local tag can otherwise move between the preflight and the data read.
   const version=dockerProbe(['run','--rm','--pull','never','--network','none','--read-only',
     '--cap-drop','ALL','--security-opt','no-new-privileges','--pids-limit','32',
     '--memory','128m','--cpus','1','--user','999:999',
-    '--entrypoint','pg_restore',candidate,'--version'],25000);
+    '--entrypoint','pg_restore',imageId,'--version'],25000);
   if(version&&/pg_restore \(PostgreSQL\) 17(?:\.|\s|$)/.test(version)){
-   verifiedImage=candidate;
+   verifiedImage=imageId;
    return verifiedImage;
   }
  }
