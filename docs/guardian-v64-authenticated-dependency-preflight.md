@@ -39,3 +39,11 @@ Em nova execução do operador com o `.r62db` autêntico, o Guardian voltou a au
 O V6.4.1 separa `EXTENSION` antes de analisar proprietários, interpreta entrada com ou sem campo owner, e nunca considera o nome da extensão uma role. Os testes passaram a cobrir ambos os formatos e o ensaio de dump PostgreSQL sintético agora inclui `CREATE EXTENSION pgcrypto` e exige nome EXTENSION detectado no caminho AES-GCM + pg_restore --list. **A contagem original 7 roles candidatas não estava autenticada semanticamente como sete roles reais**; só um novo relatório corrigido poderá reestimar essa contagem, ainda sujeita a outros itens ambíguos.
 
 A falha anterior `BLOCKED_ERROR_REDACTED` foi seguida por uma autenticação bem-sucedida. Sem evidência adicional, não há atribuição conclusiva dessa falha a uma causa específica. Nenhum SQL ou dado de produção foi alterado pelos dois relatórios. Não é necessário fornecer dump em claro ou lista privada de nomes ao desenvolvedor.
+
+## V6.4.2 — Segundo relato local, correção de coluna vazia em EXTENSION
+
+Novo resultado do operador: backup real autenticado com sucesso (`AES_GCM_TAG_AUTHENTICATED=YES`), catálogo 919/919 intacto, 6 entradas `TOC_EXTENSION`, mas contador de nomes novamente zero. Alteração de métricas de `UNCLASSIFIED=9→15` e `AMBIGUOUS_OWNER=12→6` após V6.4.1 confirma que as 6 entradas passaram para o ramo de parsing de extensões mas ainda não casaram no matcher. Hipótese técnica principal: `pg_restore --list` imprime a coluna owner vazia como espaços à direita; V6.4.1 não normalizava whitespace à direita.
+
+O V6.4.2 agora normaliza apenas a extremidade direita (`trimEnd()`), preserva dados entre colunas e interpreta extensões sem campo owner, sem considerar o nome de extensão como role. Foi criado teste com coluna final vazia em várias formas (`spaces` e `tab`) e verificação direta sobre o módulo do GitHub mostrou 6 entradas e 6 nomes distintos para um fixture; isso ainda precisa de confirmação no **backup verdadeiro**.
+
+**Mudança fail-closed:** um campo EXTENSION de formato desconhecido gera `EXTENSION_TOC_FORMAT_UNSUPPORTED` e jamais `DEPENDENCY_DISTINCT_EXTENSIONS=0` com `PG_RESTORE_CATALOG=PASS`. A integridade criptográfica e o inventário original permaneceram válidos em todas as tentativas; o bug estava exclusivamente na classificação secundária de dependências. Nenhuma SQL foi executada.
