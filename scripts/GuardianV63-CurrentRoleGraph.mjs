@@ -16,7 +16,7 @@ export function inspectCurrentRoleGraph(report){
   !Array.isArray(report.object_owners)||!Array.isArray(report.default_acls)||
   report.role_memberships.length>10000||report.object_owners.length>10000||
   report.default_acls.length>10000)fail('INVALID_CURRENT_METADATA');
- const edges=new Set(),graph=new Map(),memberRoles=new Set();
+ const edges=new Set(),memberDetails=[],graph=new Map(),memberRoles=new Set();
  let admin=0,inherit=0,set=0,selfGrants=0;
  for(const m of report.role_memberships){
   exact(m,['granted_role','member_role','admin_option','inherit_option','set_option']);
@@ -26,6 +26,7 @@ export function inspectCurrentRoleGraph(report){
   const k=m.granted_role+'\0'+m.member_role;
   if(edges.has(k))fail('DUPLICATE_MEMBERSHIP');
   edges.add(k);memberRoles.add(m.granted_role);memberRoles.add(m.member_role);
+  memberDetails.push([m.granted_role,m.member_role,m.admin_option,m.inherit_option,m.set_option]);
   admin+=Number(m.admin_option);inherit+=Number(m.inherit_option);set+=Number(m.set_option);
   if(m.granted_role===m.member_role)selfGrants++;
   const n=graph.get(m.member_role)||[];n.push(m.granted_role);graph.set(m.member_role,n);
@@ -41,7 +42,7 @@ export function inspectCurrentRoleGraph(report){
   active.delete(role);visited.add(role);
  }
  for(const role of memberRoles)visit(role);
- const ownerGroups=new Set(),ownerRoles=new Set(),ownerSchemas=new Set();
+ const ownerGroups=new Set(),ownerDetails=[],ownerRoles=new Set(),ownerSchemas=new Set();
  let objectCount=0;
  for(const r of report.object_owners){
   exact(r,['owner_role','schema_name','object_count']);
@@ -49,9 +50,10 @@ export function inspectCurrentRoleGraph(report){
   const k=r.schema_name+'\0'+r.owner_role;
   if(ownerGroups.has(k))fail('DUPLICATE_OWNER_GROUP');
   ownerGroups.add(k);ownerRoles.add(r.owner_role);ownerSchemas.add(r.schema_name);
+  ownerDetails.push([r.schema_name,r.owner_role,r.object_count]);
   objectCount+=r.object_count;
  }
- const defaultEntries=new Set(),defaultSchemas=new Set(),defaultRoles=new Set();
+ const defaultEntries=new Set(),aclDetails=[],defaultSchemas=new Set(),defaultRoles=new Set();
  let aclCount=0;
  for(const d of report.default_acls){
   exact(d,['entries','owner_role','object_type','schema_name']);
@@ -60,11 +62,13 @@ export function inspectCurrentRoleGraph(report){
   const k=d.owner_role+'\0'+d.schema_name+'\0'+d.object_type;
   if(defaultEntries.has(k))fail('DUPLICATE_DEFAULT_ACL_GROUP');
   defaultEntries.add(k);defaultSchemas.add(d.schema_name);defaultRoles.add(d.owner_role);
+  aclDetails.push([d.owner_role,d.schema_name,d.object_type,d.entries]);
   aclCount+=d.entries;
  }
  const digest=crypto.createHash('sha256').update(JSON.stringify({
-  memberships:[...edges].sort(),owners:[...ownerGroups].sort(),
-  acl:[...defaultEntries].sort(),count:objectCount,aclCount
+  memberships:memberDetails.map(x=>JSON.stringify(x)).sort(),
+  owners:ownerDetails.map(x=>JSON.stringify(x)).sort(),
+  acl:aclDetails.map(x=>JSON.stringify(x)).sort(),count:objectCount,aclCount
  })).digest('hex').slice(0,16).toUpperCase();
  return {membershipEdges:edges.size,distinctMembershipRoles:memberRoles.size,admin,inherit,set,
   selfGrants,cyclic,objectGroups:ownerGroups.size,objectSchemas:ownerSchemas.size,
