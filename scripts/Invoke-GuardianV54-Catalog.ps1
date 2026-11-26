@@ -63,6 +63,7 @@ try{
   & node $js --archive $found[0] --expected-sha256 $ExpectedSha256 --report-file $tempReport
  }
  $exit=$LASTEXITCODE
+ if($exit -ne 0){throw 'AUTHENTICATED_READER_BLOCKED'}
  if(-not (Test-Path -LiteralPath $tempReport -PathType Leaf)){throw 'MISSING_SAFE_REPORT'}
  $items=@(Get-Content -LiteralPath $tempReport -ErrorAction Stop)
  if($items.Count -lt 3 -or $items.Count -gt 80 -or $items[-1] -ne 'END_REPORT_OK'){throw 'INVALID_SAFE_REPORT'}
@@ -91,3 +92,4 @@ $report.Add('END_OPERATOR_REPORT_OK')
 $out=$report -join [Environment]::NewLine
 Write-Output $out
 if(-not $NoClipboard){try{Set-Clipboard -Value $out}catch{}}
+if($report.Contains('STATUS=BLOCKED_REDACTED')){exit 2}
