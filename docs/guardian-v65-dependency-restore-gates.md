@@ -99,3 +99,13 @@ User-provided sanitized local operator output on pinned six-file revision `3158d
 - V5.5 preflight accepts these fields optionally for backward compatibility, rejects partial groups and any sum different from `TOC_TABLE`. Integration and negative tests updated.
 - PowerShell operator now requires **seven** local scripts, including V67, before prompting for backup credentials. Older six-file V6.6 pinned bundle is only valid for its original pinned commit; never mix source versions.
 - This version has not yet been tested against the real encrypted archive. Run no genuine backup until **new commit-specific full synthetic integration + Windows operator + preflight CI** completes.
+
+## V6.7 authenticated real backup evidence
+User-provided safe operator result on seven-file V6.7 integration (full 34/34 green CI on commit `23f6f6e03ee37fa0d715ec871a32a66a91576128`):
+- Ciphertext copies 3/3 matching, AES-GCM valid, PG17 networkless `pg_restore --list` pass; `ARCHIVE_CONTENT_SHA16=EA995E37864FF769`, `ARCHIVE_CATALOG_ITEMS=919`.
+- `SCOPE_PUBLIC_SCHEMA_TABLES=25`, `SCOPE_OTHER_SIMPLE_SCHEMA_TABLES=52`, `SCOPE_NO_SCHEMA_TABLES=0`, `SCOPE_COMPLEX_SCHEMA_TABLES=0`; arithmetic 25+52=77 `TOC_TABLE`.
+- `TOC_TABLE_DATA=73`; the numerical difference 77-73=4 is not proof of missing table data, missing rows, or restore failure. No table/data pairing proof yet.
+- Original user table reference remains 76, but archival TOC includes tables in multiple schemas. `SCOPE_ORIGINAL_USER_TABLES_VALIDATED=NO` and no mapping to historical user-table scope.
+- V6.6 unchanged: six known PostgreSQL descriptor-kind entries not recognized by V6.5 and three other unknown; one nonstandard tail in a no-owner-proof type. Historical global roles/ACL not validated.
+- `PG_RESTORE_EXECUTED_SQL=NO`, `DATABASE_RESTORED=NO`, `ROLES_ACL_RESTORED=NO`, `PRODUCTION_TOUCHED=NO`.
+No credentials, schema/table/object names or backup data stored.
