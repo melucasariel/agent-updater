@@ -18,8 +18,10 @@ export function auditTocTableDataPairs(toc){
   else continue;
   const id=SIMPLE.exec(rest);
   if(!id){if(kind==='table')ambiguousTables++;else ambiguousData++;continue;}
-  // This key is never exposed; discard when audit returns. Ignore owner strings.
-  const key=id[1]+'\u0000'+id[2];
+  // Exact *text* equality of schema, object and owner token is a conservative
+  // consistency check, NOT proof that the named role exists or can be restored.
+  // This ephemeral key never leaves this function.
+  const key=id[1]+'\u0000'+id[2]+'\u0000'+id[3];
   const map=kind==='table'?tables:data;
   map.set(key,(map.get(key)||0)+1);
  }
