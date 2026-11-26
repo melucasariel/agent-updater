@@ -52,28 +52,29 @@ try{
  prepare('20261125-fixture-a-copy','release-version-A','same','B');
  prepare('20261125-fixture-b','release-version-B','new-web-only','C');
  save();
- const s=summarizeIndex(index);
+ const s=summarizeIndex(index,keySha256);
  assert.equal(s.signedBundles,3);
  assert.equal(s.distinctPackages,2);
  assert.equal(s.distinctEncryptedArchives,1);
  assert.equal(s.identicalPackageCopies,1);
  assert.equal(s.releaseLabels,2);
  assert.equal(s.trustedSignerKeys,1);
+ assert.throws(()=>summarizeIndex(index,'0'.repeat(64)),e=>e.message==='UNTRUSTED_SIGNER_IN_INDEX');
  entries.push({...entries[0]});
  save();
- assert.throws(()=>summarizeIndex(index),e=>e.message==='INDEX_DUPLICATE_BUNDLE');
+ assert.throws(()=>summarizeIndex(index,keySha256),e=>e.message==='INDEX_DUPLICATE_BUNDLE');
  entries.pop();
  const oldKey=entries[2].keySha256;
  entries[2].keySha256='0'.repeat(64);
  save();
- assert.throws(()=>summarizeIndex(index),/TRUST_KEY_FINGERPRINT_MISMATCH/);
+ assert.throws(()=>summarizeIndex(index,keySha256),/TRUST_KEY_FINGERPRINT_MISMATCH/);
  entries[2].keySha256=oldKey;
  save();
  // A previously signed bundle with same captureId but different content
  // must not be accepted as the original historical capture.
  prepare('20261125-fixture-a','release-version-X','different','D');
  save();
- assert.throws(()=>summarizeIndex(index),e=>e.message==='CAPTURE_ID_COLLISION');
+ assert.throws(()=>summarizeIndex(index,keySha256),e=>e.message==='CAPTURE_ID_COLLISION');
  console.log('V61_SIGNED_BACKUP_HISTORY_THREE_COPIES_ONE_DB_POINT=PASS');
  console.log('V61_RELEASE_VERSIONS_DISTINCT_FROM_DB_POINTS=PASS');
  console.log('V61_CAPTURE_COLLISION_AND_KEY_SUBSTITUTION=BLOCKED');
